@@ -1,10 +1,10 @@
-/* $Id: helpers2.h 199 2011-05-22 05:09:13Z oh2gve $
+/* $Id: helpers2.h 226 2014-11-23 12:33:36Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
- * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
+ * Copyright 2005-2012 Tapio Sokura
+ * Copyright 2007-2012 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010 Tapio Aaltonen
+ * Copyright 2009-2014 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -125,13 +125,8 @@ void fapint_parse_comment_telemetry(fap_packet_t* packet, char** rest, unsigned 
 void fapint_init_wx_report(fap_wx_report_t* wx_report);
 
 
-// Reset fields of given telemetry report.
-/**
- * Numeric fields are set to 0, bits are set to ?.
- * \param report to reset.
-*/
-void fapint_init_telemetry_report(fap_telemetry_t* telemetry);
-
+/// Set all fields of given telemetry report to NULL.
+void fapint_init_telemetry_report(fap_telemetry_t* tlm_report);
 
 /// Returns copy of given input with specified part removed.
 char* fapint_remove_part(char const* input, unsigned int const input_len,

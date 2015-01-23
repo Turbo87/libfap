@@ -1,10 +1,10 @@
-/* $Id: fap.c 203 2011-11-20 05:50:04Z oh2gve $
+/* $Id: fap.c 226 2014-11-23 12:33:36Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
- * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
+ * Copyright 2005-2012 Tapio Sokura
+ * Copyright 2007-2012 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010, 2011 Tapio Aaltonen
+ * Copyright 2009-2014 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -126,6 +126,7 @@ regex_t fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any, fapint_r
 regex_t fapint_regex_nmea_chksum, fapint_regex_nmea_dst, fapint_regex_nmea_time, fapint_regex_nmea_date;
 regex_t fapint_regex_nmea_specou, fapint_regex_nmea_fix, fapint_regex_nmea_altitude, fapint_regex_nmea_flag, fapint_regex_nmea_coord;
 regex_t fapint_regex_telemetry, fapint_regex_peet_splitter, fapint_regex_kiss_callsign, fapint_regex_kiss_digi;
+regex_t fapint_regex_base91_telemetry;
 
 /* Regex needed in this file. */
 regex_t fapint_regex_detect_comp, fapint_regex_detect_wx, fapint_regex_detect_telem, fapint_regex_detect_exp;
@@ -248,12 +249,16 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 				result->timestamp = malloc(sizeof(time_t));
 				if ( !result->timestamp ) return result;
 				*result->timestamp = fapint_parse_timestamp(body+1);
-				if ( result->timestamp == NULL )
+				if ( *result->timestamp == 0 )
 				{
 					result->error_code = malloc(sizeof(fap_error_code_t));
 					if ( result->error_code ) *result->error_code = fapTIMESTAMP_INV_LOC;
 					i = 0; /* we has error */
 				}
+				result->raw_timestamp = malloc(7);
+				if ( !result->raw_timestamp ) return result;
+				memcpy(result->raw_timestamp, body+1, 6);
+				result->raw_timestamp[6] = 0;
 				tmp = fapint_remove_part(body, body_len, 0, 8, &body_len);
 				free(body);
 				body = tmp;
@@ -1639,6 +1644,8 @@ void fap_init()
 		regcomp(&fapint_regex_hdr_detail, "^([A-Z0-9]{1,6})(-[0-9]{1,2})?>([A-Z0-9]{1,6})(-[0-9]{1,2})?(,.*)?$", REG_EXTENDED);
 		regcomp(&fapint_regex_kiss_digi, "^([A-Z0-9]{1,6})(-[0-9]{1,2})?(\\*)?$", REG_EXTENDED);
 		
+		regcomp(&fapint_regex_base91_telemetry, "\\|([!-{]{2})([!-{]{2})([!-{]{2}|)([!-{]{2}|)([!-{]{2}|)([!-{]{2}|)([!-{]{2}|)\\|", REG_EXTENDED);
+		
 		regcomp(&fapint_regex_hopcount1, "^([A-Z0-9-]+)\\*$", REG_EXTENDED);
 		regcomp(&fapint_regex_hopcount2, "^WIDE([1-7])-([0-7])$", REG_EXTENDED);
 	
@@ -1722,6 +1729,8 @@ void fap_cleanup()
 		regfree(&fapint_regex_hdr_detail);
 		regfree(&fapint_regex_kiss_digi);
 		
+		regfree(&fapint_regex_base91_telemetry);
+		
 		regfree(&fapint_regex_hopcount1);
 		regfree(&fapint_regex_hopcount2);
 		
@@ -1781,6 +1790,7 @@ void fap_free(fap_packet_t* packet)
 	if ( packet->radio_range ) { free(packet->radio_range); }
 	if ( packet->phg ) { free(packet->phg); }
 	if ( packet->timestamp ) { free(packet->timestamp); }
+	if ( packet->raw_timestamp ) { free(packet->raw_timestamp); }
 	if ( packet->nmea_checksum_ok ) { free(packet->nmea_checksum_ok); }
 	
 	if ( packet->wx_report )
@@ -1809,7 +1819,16 @@ void fap_free(fap_packet_t* packet)
 		free(packet->wx_report);
 	}
 	
-	if ( packet->telemetry ) { free(packet->telemetry); }
+	if ( packet->telemetry )
+	{
+		if ( packet->telemetry->seq ) { free(packet->telemetry->seq); }
+		if ( packet->telemetry->val1 ) { free(packet->telemetry->val1); }
+		if ( packet->telemetry->val2 ) { free(packet->telemetry->val2); }
+		if ( packet->telemetry->val3 ) { free(packet->telemetry->val3); }
+		if ( packet->telemetry->val4 ) { free(packet->telemetry->val4); }
+		if ( packet->telemetry->val5 ) { free(packet->telemetry->val5); }
+		free(packet->telemetry);
+	}
 
 	if ( packet->messagebits ) { free(packet->messagebits); }
 	if ( packet->status ) { free(packet->status); }

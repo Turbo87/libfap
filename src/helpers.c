@@ -1,10 +1,10 @@
-/* $Id: helpers.c 200 2011-05-22 16:42:29Z oh2gve $
+/* $Id: helpers.c 226 2014-11-23 12:33:36Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
- * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
+ * Copyright 2005-2012 Tapio Sokura
+ * Copyright 2007-2012 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010, 2011 Tapio Aaltonen
+ * Copyright 2009-2014 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -629,6 +629,56 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 		return 1;
 	}
 	
+	/* Check for Mic-E telemetry. */
+/*
+	bzero(buf_6b, 6);
+	fprintf(stderr, "SEARCHING 2-CHANNEL MIC-E TELEMETRY\n");
+	if ( rest[0] == '\'' )
+	{
+		for (i = 1; i <= 4; i++ )
+		{
+			if ( !isxdigit(rest[i]) )
+			{
+				i = 0;
+				break;
+			}
+		}
+		if ( i > 0 )
+		{
+			fprintf(stderr, "FOUND 2-CHANNEL MIC-E TELEMETRY\n");
+			packet->telemetry = malloc(sizeof(fap_telemetry_t));
+			if ( !packet->telemetry ) return;
+			packet->telemetry->val1 = malloc(sizeof(double));
+			if ( !packet->telemetry->val1 ) return;
+			buf_6b[0] = rest[1];
+			buf_6b[1] = rest[2];
+			*packet->telemetry->val1 = strtol(buf_6b, NULL, 16);
+			packet->telemetry->val3 = malloc(sizeof(double));
+			if ( !packet->telemetry->val3 ) return;
+			buf_6b[0] = rest[3];
+			buf_6b[1] = rest[4];
+			*packet->telemetry->val3 = strtol(buf_6b, NULL, 16);
+		}
+	}
+	fprintf(stderr, "DONE\n");
+	fprintf(stderr, "SEARCHING 5-CHANNEL MIC-E TELEMETRY\n");
+	if ( rest[0] == '`' )
+	{
+		for ( i = 1; i <= 10; i++ )
+		{
+			if ( !isxdigit(rest[i]) )
+			{
+				i = 0;
+				break;
+			}
+		}
+		if ( i > 0 )
+		{
+			fprintf(stderr, "FOUND 2 CHANNEL MIC-E TELEMETRY\n");
+		}
+	}
+	fprintf(stderr, "DONE\n");
+*/	
 	/* Check for possible altitude. Altitude is base-91 coded and in format
 	 * "xxx}" where x are the base-91 digits in meters, origin is 10000 meters
 	 * below sea. */
@@ -663,6 +713,9 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 		}
 	}
 
+	/* Check for base-91 comment telemetry. */
+	fapint_parse_comment_telemetry(packet, &rest, &len);
+	
 	/* If we still hafe stuff left, check for !DAO!, take the last occurrence (per recommendation). */
 	if ( len > 0 )
 	{
@@ -689,9 +742,6 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 		}
 	}
 
-	/* Check for base-91 comment telemetry. */
-	/*fapint_parse_comment_telemetry(packet, &rest, &len);*/
-	
 	/* If there's something left, save it as a comment. */
 	if ( len > 0 )
 	{
@@ -708,12 +758,14 @@ time_t fapint_parse_timestamp(char const* input)
 	char buf_3b[3];
 	unsigned int first, second, third;
 	char type;
-	struct tm now_struct, fwd_struct, back_struct, *tmp_struct;
-	time_t now, fwd, back, result;
+	struct tm now_struct, fwd_struct, back_struct, tmp_struct;
+	time_t thismonth, nextmonth, prevmonth, result;
+	const time_t now = time(NULL);
 	
 	unsigned int const matchcount = 5;
 	regmatch_t matches[matchcount];
 
+	gmtime_r(&now, &now_struct);
 
 	/* Validate input. */
 	if ( !input )
@@ -738,7 +790,7 @@ time_t fapint_parse_timestamp(char const* input)
 	{
 		return 0;
 	}
-	
+
 	/* Continue based on stamp type. */
 	if ( type == 'h' )
 	{
@@ -749,13 +801,11 @@ time_t fapint_parse_timestamp(char const* input)
 		}
 		
 		/* Convert into unixtime. */
-		now = time(NULL);
-		tmp_struct = gmtime(&now);
-		memcpy((struct tm*)&now_struct, tmp_struct, sizeof(struct tm));
-		now_struct.tm_sec = third;
-		now_struct.tm_min = second;
-		now_struct.tm_hour = first-1;
-		result = mktime((struct tm*)&now_struct);
+		memcpy((struct tm*)&tmp_struct, &now_struct, sizeof(struct tm));
+		tmp_struct.tm_sec = third;
+		tmp_struct.tm_min = second;
+		tmp_struct.tm_hour = first;
+		result = timegm((struct tm*)&tmp_struct);
 		
 		/* If the time is more than about one hour into the future, roll the
 			timestamp one day backwards. */
@@ -785,61 +835,58 @@ time_t fapint_parse_timestamp(char const* input)
 		/* Form the possible timestamps. */
 		
 		/* This month. */
-		now = time(NULL);
-		if ( type == 'z' )
-		{
-			tmp_struct = gmtime(&now);
-		}
-		else
-		{
-			tmp_struct = localtime(&now);
-		}
-		memcpy((struct tm*)&now_struct, tmp_struct, sizeof(struct tm));
-		now_struct.tm_mday = first;
-		now_struct.tm_hour = second-1;
-		now_struct.tm_min = third;
-		now_struct.tm_sec = 0;
-		now = mktime((struct tm*)&now_struct);
+		memcpy((struct tm*)&tmp_struct, &now_struct, sizeof(struct tm));
+		tmp_struct.tm_mday = first;
+		tmp_struct.tm_hour = second;
+		tmp_struct.tm_min = third;
+		tmp_struct.tm_sec = 0;
+		thismonth = timegm((struct tm*)&tmp_struct);
 
 		/* Next month. */
-		memcpy((struct tm*)&fwd_struct, tmp_struct, sizeof(struct tm));
-		fwd_struct.tm_mon += 1;
-		fwd_struct.tm_mday = first;
-		fwd_struct.tm_hour = second-1;
-		fwd_struct.tm_min = third;
-		fwd_struct.tm_sec = 0;
-		fwd = mktime((struct tm*)&fwd_struct);
+		memcpy((struct tm*)&tmp_struct, &now_struct, sizeof(struct tm));
+		tmp_struct.tm_mon += 1;
+		tmp_struct.tm_mday = first;
+		tmp_struct.tm_hour = second;
+		tmp_struct.tm_min = third;
+		tmp_struct.tm_sec = 0;
+		nextmonth = timegm((struct tm*)&tmp_struct);
 		
 		/* Previous month. */
-		memcpy((struct tm*)&back_struct, tmp_struct, sizeof(struct tm));
-		if ( back_struct.tm_mon == 0 )
+		memcpy((struct tm*)&tmp_struct, &now_struct, sizeof(struct tm));
+		if ( tmp_struct.tm_mon == 0 )
 		{
-			back_struct.tm_mon = 11;
-			back_struct.tm_year -= 1;
+			tmp_struct.tm_mon = 11;
+			tmp_struct.tm_year -= 1;
 		}
 		else
 		{
-			back_struct.tm_mon -= 1;
+			tmp_struct.tm_mon -= 1;
 		}
-		back_struct.tm_mday = first;
-		back_struct.tm_hour = second-1;
-		back_struct.tm_min = third;
-		back_struct.tm_sec = 0;
-		back = mktime((struct tm*)&back_struct);
+		tmp_struct.tm_mday = first;
+		tmp_struct.tm_hour = second-1;
+		tmp_struct.tm_min = third;
+		tmp_struct.tm_sec = 0;
+		prevmonth = timegm((struct tm*)&tmp_struct);
 		
 		/* Select the timestamp to use. Pick the timestamp that is largest,
 			but under about 12 hours from current time. */
-		if ( fwd - now < 43400 )
+		if ( nextmonth - now < 43400 )
 		{
-			result = fwd;
+			result = nextmonth;
 		}
-		else if ( now - time(NULL) < 43400 )
+		else if ( thismonth - now < 43400 )
 		{
-			result = now;
+			result = thismonth;
 		}
 		else
 		{
-			result = back;
+			result = prevmonth;
+		}
+		
+		/* Convert local to UTC. */
+		if ( type == '/' )
+		{
+			result += timezone;
 		}
 		
 		return result;
@@ -1323,6 +1370,9 @@ void fapint_parse_comment(fap_packet_t* packet, char const* input, unsigned int 
 		}
 	}
 		
+	/* Check for base-91 comment telemetry. */
+	fapint_parse_comment_telemetry(packet, &rest, &rest_len);
+	
 	/* If we still hafe stuff left, check for !DAO!, take the last occurrence (per recommendation). */
 	if ( rest_len > 0 )
 	{
@@ -1348,9 +1398,6 @@ void fapint_parse_comment(fap_packet_t* packet, char const* input, unsigned int 
 			}
 		}
 	}
-	
-	/* Check for base-91 comment telemetry. */
-	/*fapint_parse_comment_telemetry(packet, &rest, &rest_len);*/
 	
 	/* If there's something left, save it as a comment. */
 	if ( rest_len > 0 )
@@ -2950,7 +2997,6 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 	{
 		return 0;
 	}
-	
 	if ( regexec(&fapint_regex_telemetry, input, matchcount, (regmatch_t*)&matches, 0) == 0 )
 	{
 		/* Initialize results. */
@@ -2964,7 +3010,9 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 		if ( !tmp_str ) return 0;
 		memcpy(tmp_str, input+matches[1].rm_so, len1);
 		tmp_str[len1] = 0;
-		packet->telemetry->seq = atoi(tmp_str);
+		packet->telemetry->seq = malloc(sizeof(unsigned int));
+		if ( !packet->telemetry->seq ) return 0;
+		*packet->telemetry->seq = atoi(tmp_str);
 		free(tmp_str);
 		
 		/* val1 */
@@ -2975,7 +3023,9 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 		memcpy(tmp_str, input+matches[2].rm_so, len1);
 		memcpy(tmp_str+len1, input+matches[3].rm_so, len2);
 		tmp_str[len1+len2] = 0;
-		packet->telemetry->val1 = atof(tmp_str);
+		packet->telemetry->val1 = malloc(sizeof(double));
+		if ( !packet->telemetry->val1 ) return 0;
+		*packet->telemetry->val1 = atof(tmp_str);
 		free(tmp_str);
 
 		/* val2 */
@@ -2986,7 +3036,9 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 		memcpy(tmp_str, input+matches[4].rm_so, len1);
 		memcpy(tmp_str+len1, input+matches[5].rm_so, len2);
 		tmp_str[len1+len2] = 0;
-		packet->telemetry->val2 = atof(tmp_str);
+		packet->telemetry->val2 = malloc(sizeof(double));
+		if ( !packet->telemetry->val2 ) return 0;
+		*packet->telemetry->val2 = atof(tmp_str);
 		free(tmp_str);
 		
 		/* val3 */
@@ -2997,7 +3049,9 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 		memcpy(tmp_str, input+matches[6].rm_so, len1);
 		memcpy(tmp_str+len1, input+matches[7].rm_so, len2);
 		tmp_str[len1+len2] = 0;
-		packet->telemetry->val3 = atof(tmp_str);
+		packet->telemetry->val3 = malloc(sizeof(double));
+		if ( !packet->telemetry->val3 ) return 0;
+		*packet->telemetry->val3 = atof(tmp_str);
 		free(tmp_str);
 
 		/* val4 */
@@ -3008,7 +3062,9 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 		memcpy(tmp_str, input+matches[8].rm_so, len1);
 		memcpy(tmp_str+len1, input+matches[9].rm_so, len2);
 		tmp_str[len1+len2] = 0;
-		packet->telemetry->val4 = atof(tmp_str);
+		packet->telemetry->val4 = malloc(sizeof(double));
+		if ( !packet->telemetry->val4 ) return 0;
+		*packet->telemetry->val4 = atof(tmp_str);
 		free(tmp_str);
 
 		/* val5 */
@@ -3019,7 +3075,9 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 		memcpy(tmp_str, input+matches[10].rm_so, len1);
 		memcpy(tmp_str+len1, input+matches[11].rm_so, len2);
 		tmp_str[len1+len2] = 0;
-		packet->telemetry->val5 = atof(tmp_str);
+		packet->telemetry->val5 = malloc(sizeof(double));
+		if ( !packet->telemetry->val5 ) return 0;
+		*packet->telemetry->val5 = atof(tmp_str);
 		free(tmp_str);
 
 		/* bits */
@@ -3296,7 +3354,7 @@ int fapint_parse_wx_peet_logging(fap_packet_t* packet, char const* input)
 			current_elem = current_elem->next;
 
 		/* avg wind speed */
-		if ( current_elem->text )
+		if ( current_elem && current_elem->text )
 		{
 			*packet->wx_report->wind_speed = strtol(current_elem->text, NULL, 16) * KMH_TO_MS / 10.0;
 		}
@@ -3776,6 +3834,7 @@ fap_packet_t* fapint_create_packet()
 	result->radio_range = NULL;
 	result->phg = NULL;
 	result->timestamp = NULL;
+	result->raw_timestamp = NULL;
 	result->nmea_checksum_ok = NULL;
 	
 	result->wx_report = NULL;

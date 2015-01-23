@@ -1,10 +1,10 @@
-/* $Id: helpers2.c 200 2011-05-22 16:42:29Z oh2gve $
+/* $Id: helpers2.c 226 2014-11-23 12:33:36Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
- * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
+ * Copyright 2005-2012 Tapio Sokura
+ * Copyright 2007-2012 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010, 2011 Tapio Aaltonen
+ * Copyright 2009-2014 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -540,157 +540,74 @@ short fapint_valid_com_telem_char(char c)
 
 void fapint_parse_comment_telemetry(fap_packet_t* packet, char** rest, unsigned int* rest_len)
 {
-	int len = 0, i = 0, j = 0, tmp;
+	int tmp;
 	char* tmp_str;
 	unsigned int tmp_us;
-	char buf[10];
+	char buf[100];
 	
-	/* Look for start marker. */
-	for ( i = 0; i < *rest_len; ++i )
-	{
-		if ( (*rest)[i] == '|' )
-		{
-			/* Look for stop marker. */
-			for ( j = i+1; j < *rest_len; ++j )
-			{
-				if ( (*rest)[j] == '|' )
-				{
-					break;
-				}
-			}
-			break;
-		}
-	}
+	unsigned int const matchcount = 8;
+	regmatch_t matches[matchcount];
 	
-	/* Check that we found markers, and that they mark even-lenght string. */
-	len = j - i + 1;
-	if ( i < *rest_len && j < *rest_len && len > 1 && len % 2 == 0)
+	/* Look for base91-telemetry. */
+	if ( regexec(&fapint_regex_base91_telemetry, *rest, matchcount, (regmatch_t*)&matches, 0) == 0 )
 	{
-		/* Check for sequence id. */
-		if ( len >= 4 )
-		{
-			if ( fapint_valid_com_telem_char((*rest)[i+1]) &&
-			     fapint_valid_com_telem_char((*rest)[i+2]) )
-			{
-				/* Initialize results. */
-				packet->telemetry = malloc(sizeof(fap_telemetry_t));
-				if ( !packet->telemetry ) return;
-				fapint_init_telemetry_report(packet->telemetry);
-				
-				packet->telemetry->seq = ((*rest)[i+1] - 33) * 91 + (*rest)[i+2] - 33;
-			}
-			else
-			{
-				return;
-			}
-		}
+		/* Initialize results. */
+		packet->telemetry = malloc(sizeof(fap_telemetry_t));
+		if ( !packet->telemetry ) return;
+		fapint_init_telemetry_report(packet->telemetry);
 		
-		/* Check for first data value. */
-		if ( len >= 6 )
-		{
-			if ( fapint_valid_com_telem_char((*rest)[i+3]) &&
-			     fapint_valid_com_telem_char((*rest)[i+4]) )
-			{
-				packet->telemetry->val1 = ((*rest)[i+3] - 33) * 91 + (*rest)[i+4] - 33;
-			}
-			else
-			{
-				free(packet->telemetry);
-				packet->telemetry = NULL;
-				return;
-			}
-		}
+		/* Get sequence number and first value. */
+		packet->telemetry->seq = malloc(sizeof(unsigned int));
+		if ( !packet->telemetry->seq ) return;
+		*packet->telemetry->seq = ((*rest)[matches[1].rm_so] - 33) * 91 + (*rest)[matches[1].rm_so+1] - 33;
+		packet->telemetry->val1 = malloc(sizeof(double));
+		if ( !packet->telemetry->val1 ) return;
+		*packet->telemetry->val1 = ((*rest)[matches[2].rm_so] - 33) * 91 + (*rest)[matches[2].rm_so+1] - 33;
 		
-		/* Check for second data value. */
-		if ( len >= 8 )
+		/* Get other values if defined. */
+		if ( matches[3].rm_eo - matches[3].rm_so > 0 )
 		{
-			if ( fapint_valid_com_telem_char((*rest)[i+5]) &&
-			     fapint_valid_com_telem_char((*rest)[i+6]) )
-			{
-				packet->telemetry->val2 = ((*rest)[i+5] - 33) * 91 + (*rest)[i+6] - 33;
-			}
-			else
-			{
-				free(packet->telemetry);
-				packet->telemetry = NULL;
-				return;
-			}
-		}
-		
-		/* Check for third data value. */
-		if ( len >= 10 )
+		        packet->telemetry->val2 = malloc(sizeof(double));
+		        if ( !packet->telemetry->val2 ) return;
+		        *packet->telemetry->val2 = ((*rest)[matches[3].rm_so] - 33) * 91 + (*rest)[matches[3].rm_so+1] - 33;
+                }
+		if ( matches[4].rm_eo - matches[4].rm_so > 0 )
 		{
-			if ( fapint_valid_com_telem_char((*rest)[i+7]) &&
-			     fapint_valid_com_telem_char((*rest)[i+8]) )
-			{
-				packet->telemetry->val3 = ((*rest)[i+7] - 33) * 91 + (*rest)[i+8] - 33;
-			}
-			else
-			{
-				free(packet->telemetry);
-				packet->telemetry = NULL;
-				return;
-			}
-		}
+		        packet->telemetry->val3 = malloc(sizeof(double));
+		        if ( !packet->telemetry->val3 ) return;
+		        *packet->telemetry->val3 = ((*rest)[matches[4].rm_so] - 33) * 91 + (*rest)[matches[4].rm_so+1] - 33;
+                }
+                if ( matches[5].rm_eo - matches[5].rm_so > 0 )
+                {
+                        packet->telemetry->val4 = malloc(sizeof(double));
+		        if ( !packet->telemetry->val4 ) return;
+                        *packet->telemetry->val4 = ((*rest)[matches[5].rm_so] - 33) * 91 + (*rest)[matches[5].rm_so+1] - 33;
+                }
+                if ( matches[6].rm_eo - matches[6].rm_so > 0 )
+                {
+                        packet->telemetry->val5 = malloc(sizeof(double));
+		        if ( !packet->telemetry->val5 ) return;
+		        *packet->telemetry->val5 = ((*rest)[matches[6].rm_so] - 33) * 91 + (*rest)[matches[6].rm_so+1] - 33;
+                }
 		
-		/* Check for fourth data value. */
-		if ( len >= 12 )
+		/* Get bit values. */
+		if ( matches[7].rm_eo - matches[7].rm_so > 0 )
 		{
-			if ( fapint_valid_com_telem_char((*rest)[i+9]) &&
-			     fapint_valid_com_telem_char((*rest)[i+10]) )
-			{
-				packet->telemetry->val4 = ((*rest)[i+9] - 33) * 91 + (*rest)[i+10] - 33;
-			}
-			else
-			{
-				free(packet->telemetry);
-				packet->telemetry = NULL;
-				return;
-			}
-		}
-		
-		/* Check for fifth data value. */
-		if ( len >= 14 )
-		{
-			if ( fapint_valid_com_telem_char((*rest)[i+11]) &&
-			     fapint_valid_com_telem_char((*rest)[i+12]) )
-			{
-				packet->telemetry->val5 = ((*rest)[i+11] - 33) * 91 + (*rest)[i+12] - 33;
-			}
-			else
-			{
-				free(packet->telemetry);
-				packet->telemetry = NULL;
-				return;
-			}
-		}
-		
-		/* Check for bits. */
-		if ( len >= 16 )
-		{
-			if ( fapint_valid_com_telem_char((*rest)[i+13]) &&
-			     fapint_valid_com_telem_char((*rest)[i+14]) )
-			{
-				tmp = ((*rest)[i+13] - 33) * 91 + (*rest)[i+14] - 33;
-				
-				/* Print bits as digits. */
-				sprintf(buf, "%d%d%d%d%d%d%d%d", 0x01 & tmp, 0x02 & tmp, 0x04 & tmp, 0x08 & tmp, 0x10 & tmp, 0x20 & tmp, 0x40 & tmp, 0x80 & tmp);
-				for ( tmp = 0; tmp < strlen(buf) && tmp < 8; ++tmp )
-				{
-					packet->telemetry->bits[tmp] = buf[tmp];
-				}
-			}
-			else
-			{
-				free(packet->telemetry);
-				packet->telemetry = NULL;
-				return;
-			}
-		}
-		
+        		for (tmp = 0; tmp < 8; tmp++ ) packet->telemetry->bits[tmp] = '0';
+	        	tmp = ((*rest)[matches[7].rm_so] - 33) * 91 + (*rest)[matches[7].rm_so+1] - 33;
+        		if ( 0x01 & tmp ) packet->telemetry->bits[0] = '1';
+        		if ( 0x02 & tmp ) packet->telemetry->bits[1] = '1';
+        		if ( 0x04 & tmp ) packet->telemetry->bits[2] = '1';
+        		if ( 0x08 & tmp ) packet->telemetry->bits[3] = '1';
+        		if ( 0x10 & tmp ) packet->telemetry->bits[4] = '1';
+        		if ( 0x20 & tmp ) packet->telemetry->bits[5] = '1';
+        		if ( 0x40 & tmp ) packet->telemetry->bits[6] = '1';
+        		if ( 0x80 & tmp ) packet->telemetry->bits[7] = '1';
+	        }
+	        	
 		/* Remove telemetry string from comment. */
 		tmp_us = *rest_len;
-		tmp_str = fapint_remove_part(*rest, tmp_us, i, j+1, rest_len);
+		tmp_str = fapint_remove_part(*rest, tmp_us, matches[0].rm_so, matches[0].rm_eo, rest_len);
 		free(*rest);
 		*rest = tmp_str;
 	}
@@ -718,16 +635,14 @@ void fapint_init_wx_report(fap_wx_report_t* wx_report)
 
 
 
-void fapint_init_telemetry_report(fap_telemetry_t* telemetry)
+void fapint_init_telemetry_report(fap_telemetry_t* tlm_report)
 {
-	if ( !telemetry ) return;
-	telemetry->seq = 0;
-	telemetry->val1 = 0.0;
-	telemetry->val2 = 0.0;
-	telemetry->val3 = 0.0;
-	telemetry->val4 = 0.0;
-	telemetry->val5 = 0.0;
-	memset(telemetry->bits, '?', 8);
+        tlm_report->seq = NULL;
+        tlm_report->val1 = NULL;
+        tlm_report->val2 = NULL;
+        tlm_report->val3 = NULL;
+        tlm_report->val4 = NULL;
+        tlm_report->val5 = NULL;
 }
 
 

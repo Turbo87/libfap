@@ -1,10 +1,10 @@
-/* $Id: regs.h 179 2011-01-17 12:38:00Z oh2gve $
+/* $Id: regs.h 226 2014-11-23 12:33:36Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
- * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
+ * Copyright 2005-2012 Tapio Sokura
+ * Copyright 2007-2012 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010, 2011 Tapio Aaltonen
+ * Copyright 2009-2014 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -47,6 +47,7 @@ extern regex_t fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any, f
 extern regex_t fapint_regex_nmea_chksum, fapint_regex_nmea_dst, fapint_regex_nmea_time, fapint_regex_nmea_date;
 extern regex_t fapint_regex_nmea_specou, fapint_regex_nmea_fix, fapint_regex_nmea_altitude, fapint_regex_nmea_flag, fapint_regex_nmea_coord;
 extern regex_t fapint_regex_telemetry, fapint_regex_peet_splitter, fapint_regex_kiss_callsign;
+extern regex_t fapint_regex_base91_telemetry;
 
 
 #endif // REGS_H

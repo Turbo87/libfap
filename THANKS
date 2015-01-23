@@ -13,3 +13,9 @@ RPM package.
 Gordon, MM0YEQ for pkg-config metadata file and fixing the RAD2DEG() macro.
 
 Dan, KK7DS for fixing hbit setting in tnc2_to_ax25().
+
+Martin, LA5NTA for fixing a bug in parse_wx_peet_logging.
+
+Iain, MM6MVQ for packaging libfap into Debian.
+
+Fred, MW0LBR for reporting issues with timestamps.

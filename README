@@ -1,7 +1,7 @@
 Installation
 ------------
 
-To install libfap on UNIX-like system use the normal procedure:
+To install libfap on a linux system use the normal procedure:
 
 ./configure [--prefix=/opt or other options]
 make

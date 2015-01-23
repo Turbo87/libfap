@@ -1,10 +1,10 @@
-/* $Id: fap.h 187 2011-02-16 21:58:11Z oh2gve $
+/* $Id: fap.h 226 2014-11-23 12:33:36Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
- * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
+ * Copyright 2005-2012 Tapio Sokura
+ * Copyright 2007-2012 Heikki Hannikainen
  *
  * Perl-to-C modifications 
- * Copyright 2009, 2010, 2011 Tapio Aaltonen
+ * Copyright 2009-2014 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -218,19 +218,19 @@ typedef struct
 typedef struct
 {
 	/// Id of report.
-	unsigned int seq;
+	unsigned int* seq;
 	/// First value.
-	double val1;
+	double* val1;
 	/// Second value.
-	double val2;
+	double* val2;
 	/// Third value.
-	double val3;
+	double* val3;
 	/// Fourth value.
-	double val4;
+	double* val4;
 	/// Fifth value.
-	double val5;
+	double* val5;
 	
-	/// Telemetry bits as ASCII 0s and 1s. Unknowns are marked with question marks.
+	/// Telemetry bits as ASCII 0s and 1s. Undefined bits are marked with question marks.
 	char bits[8];
 } fap_telemetry_t;
 
@@ -323,8 +323,10 @@ typedef struct
 	unsigned int* radio_range;
 	/// TX power, antenna height, antenna gain and possibly beacon rate.
 	char* phg;
-	/// Timestamp of the packet in unixtime.
+	/// Timestamp of the packet in UTC.
 	time_t* timestamp;
+	/// Timestamp as it appears in the packet.
+	char* raw_timestamp;
 	/// NMEA checksum validity indicator, 1 = valid.
 	short* nmea_checksum_ok;
 	
