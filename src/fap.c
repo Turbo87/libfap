@@ -1,7 +1,7 @@
-/* $Id: fap.c 162 2010-04-02 22:57:12Z oh2gve $
+/* $Id: fap.c 175 2010-05-06 21:24:52Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
- * Copyright 2007, 2008, 2009 Heikki Hannikainen
+ * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
+ * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
  *
  * Perl-to-C modifications
  * Copyright 2009, 2010 Tapio Aaltonen
@@ -1162,21 +1162,28 @@ int fap_tnc2_to_kiss(char const* tnc2frame, unsigned int tnc2frame_len, unsigned
 	unsigned int ax25frame_len;
 	int i;
 
-	/* Initialize slot for starting FEND and tnc id by skipping two first bytes of buffer. */
+	/* Initialize slot for starting FEND and tnc id by skipping two first bytes of our conversion buffer. */
 	ax25frame_len = 2*FRAME_MAXLEN-2;
+	memset(ax25frame, 0, 2);
 	
-	// Convert into AX.25-frame.
+	/* Convert into AX.25-frame. */
 	if ( !fap_tnc2_to_ax25(tnc2frame, tnc2frame_len, ax25frame+2, &ax25frame_len) )
 	{
 		strcpy(kissframe, ax25frame);
-		*kissframe_len = ax25frame_len;
+		*kissframe_len = strlen(kissframe);
 		return 0;
 	}
 	ax25frame_len += 2;
 	
+	/* Check for room in output buffer. */
+	if ( *kissframe_len <= ax25frame_len )
+	{
+		return 0;
+	}
+	
 	/* Perform byte stuffing. */
-	*kissframe_len = 0;
-	for ( i = 0; i < ax25frame_len; ++i )
+	*kissframe_len = 2;
+	for ( i = 2; i < ax25frame_len; ++i )
 	{
 		if ( (ax25frame[i] & 0xff) == FEND || (ax25frame[i] & 0xff) == FESC )
 		{
@@ -1512,7 +1519,7 @@ void fap_init()
 		regcomp(&fapint_regex_wx_rrc, "#([0-9]+)", REG_EXTENDED);
 		regcomp(&fapint_regex_wx_any, "^([rPphblLs#][\\. ]{1,5})+", REG_EXTENDED);
 		
-		regcomp(&fapint_regex_nmea_chksum, "^([:print:]+)\\*([0-9A-F]{2})", REG_EXTENDED);
+		regcomp(&fapint_regex_nmea_chksum, "^(.+)\\*([0-9A-F]{2})$", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_dst, "^(GPS|SPC)([A-Z0-9]{2,3})", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_time, "^[:space:]*([0-9]{2})([0-9]{2})([0-9]{2})(()|\\.[0-9]+)[:space:]*$", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_date, "^[:space:]*([0-9]{2})([0-9]{2})([0-9]{2})[:space:]*$", REG_EXTENDED);
@@ -1653,6 +1660,7 @@ void fap_free(fap_packet_t* packet)
 
 	if ( packet->latitude ) { free(packet->latitude); }
 	if ( packet->longitude ) { free(packet->longitude); }
+	if ( packet->format ) { free(packet->format); }
 	if ( packet->pos_resolution ) { free(packet->pos_resolution); }
 	if ( packet->pos_ambiguity ) { free(packet->pos_ambiguity); }
 	

@@ -1,3 +1,3 @@
-# $Id: Makefile.am 121 2009-10-07 11:17:07Z oh2gve $
+# $Id: Makefile.am 170 2010-04-11 15:02:06Z oh2gve $
 
-EXTRA_DIST = artistic gpl
+EXTRA_DIST = ARTISTIC.txt GPL.txt

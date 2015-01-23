@@ -1,4 +1,4 @@
-/* $Id: smoketest.c 162 2010-04-02 22:57:12Z oh2gve $
+/* $Id: smoketest.c 172 2010-05-06 09:50:16Z oh2gve $
  *
  * This file contains an automatic smoke tester for libfap.
  * 
@@ -244,7 +244,7 @@ int test_parser()
 	fap_free(packet);
 	
 	memset(buffer, 0, BUFFER_LEN);
-	sprintf(buffer, "OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{42");
+	sprintf(buffer, "OH7LZB-11>APRS,W4GR*,WIDE2-1,qAR,WA4DSY:$GPRMC,145526,A,3349.0378,N,08406.2617,W,23.726,27.9,121207,4.9,W*7A");
 	printf("########################################\n");
 	printf("Testing parser with packet (%s) ... ", buffer);
 	packet = fap_parseaprs(buffer, strlen(buffer), 0);

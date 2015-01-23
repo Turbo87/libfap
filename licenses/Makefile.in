@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-# $Id: Makefile.am 121 2009-10-07 11:17:07Z oh2gve $
+# $Id: Makefile.am 170 2010-04-11 15:02:06Z oh2gve $
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkglibdir = $(libdir)/@PACKAGE@
@@ -154,7 +154,7 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = artistic gpl
+EXTRA_DIST = ARTISTIC.txt GPL.txt
 all: all-am
 
 .SUFFIXES:

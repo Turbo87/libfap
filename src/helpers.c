@@ -1,7 +1,7 @@
-/* $Id: helpers.c 163 2010-04-02 23:24:33Z oh2gve $
+/* $Id: helpers.c 172 2010-05-06 09:50:16Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
- * Copyright 2007, 2008, 2009 Heikki Hannikainen
+ * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
+ * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
  *
  * Perl-to-C modifications
  * Copyright 2009, 2010 Tapio Aaltonen
@@ -42,7 +42,9 @@
 int fapint_parse_header(fap_packet_t* packet, short const is_ax25)
 {
 	int i, len, startpos, retval = 1;
-	char *rest, *tmp, buf_10b[10];
+	char* rest = NULL;
+	char* tmp = NULL;
+	char buf_10b[10];
 	fapint_llist_item_t* path;
 	int path_len;
 	fapint_llist_item_t* current_elem;
@@ -77,7 +79,7 @@ int fapint_parse_header(fap_packet_t* packet, short const is_ax25)
 		/* Save the rest of the header also 0-terminated string. */
 		len = matches[2].rm_eo - matches[2].rm_so;
 		rest = malloc(len+1);
-		if ( !len ) return 0;
+		if ( !rest ) return 0;
 		memcpy(rest, packet->header + matches[2].rm_so, len);
 		rest[len] = 0;
 	}
@@ -89,6 +91,7 @@ int fapint_parse_header(fap_packet_t* packet, short const is_ax25)
 	}
 	if ( !retval )
 	{
+	        if ( rest ) free(rest);
 		return 0;
 	}
 	
@@ -144,7 +147,7 @@ int fapint_parse_header(fap_packet_t* packet, short const is_ax25)
 				if ( !path )
 				{
 					retval = 0;
-					return 0;
+					break;
 				}
 				current_elem = path;
 			}
@@ -154,7 +157,7 @@ int fapint_parse_header(fap_packet_t* packet, short const is_ax25)
 				if ( !current_elem->next )
 				{
 					retval = 0;
-					return 0;
+					break;
 				}
 				current_elem = current_elem->next;
 			}
@@ -358,6 +361,14 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 		}
 		return 0;
 	}
+	
+	/* Store pos format. */
+	packet->format = malloc(sizeof(fap_pos_format_t));
+	if ( !packet->format )
+	{
+		return 0;
+	}
+	*packet->format = fapPOS_MICE;
 	
 	/* Start process from the target call to find latitude, message bits, N/S
 	 * and W/E indicators and long. offset. */
@@ -861,6 +872,14 @@ int fapint_parse_compressed(fap_packet_t* packet, char const* input)
 		}
 	}
 	
+	/* Store pos format. */
+	packet->format = malloc(sizeof(fap_pos_format_t));
+	if ( !packet->format )
+	{
+		return 0;
+	}
+	*packet->format = fapPOS_COMPRESSED;
+	
 	/* Get symbol. */
 	symboltable = input[0];
 	symbolcode = input[9];
@@ -982,6 +1001,14 @@ int fapint_parse_normal(fap_packet_t* packet, char const* input)
 		if ( packet->error_code ) *packet->error_code = fapLOC_SHORT;
 		return 0;
 	}
+	
+	/* Save pos format. */
+	packet->format = malloc(sizeof(fap_pos_format_t));
+	if ( !packet->format )
+	{
+		return 0;
+	}
+	*packet->format = fapPOS_UNCOMPRESSED;
 	
 	/* Validate. */
 	if ( regexec(&fapint_regex_normalpos, input, matchcount, (regmatch_t*)&matches, 0) != 0 )
@@ -1381,19 +1408,32 @@ int fapint_parse_nmea(fap_packet_t* packet, char const* input, unsigned int cons
 			return 0;
 		}
 		
+		/* Make a note of the existance of a checksum. */
+		packet->nmea_checksum_ok = malloc(sizeof(short));
+		if ( !packet->nmea_checksum_ok )
+		{
+			free(rest);
+			return 0;
+		}
+		*packet->nmea_checksum_ok = 1;
+	
 		/* Remove checksum. */
 		rest = fapint_remove_part(rest, rest_len, matches[2].rm_so-1, matches[2].rm_eo, &rest_len);
 	}
+	else
+	{
+		printf("no checksum in (%s)", rest);
+	}
 	
-	/* Make a note of the existance of a checksum. */
-	packet->nmea_checksum_ok = malloc(sizeof(short));
-	if ( !packet->nmea_checksum_ok )
+	/* Format is NMEA. */
+	packet->format = malloc(sizeof(fap_pos_format_t));
+	if ( !packet->format )
 	{
 		free(rest);
 		return 0;
 	}
-	*packet->nmea_checksum_ok = 1;
-	
+	*packet->format = fapPOS_NMEA;
+
 	/* Use a dot as a default symbol if one is not defined in the destination callsign. */
 	if ( !fapint_parse_symbol_from_dst_callsign(packet) )
 	{
@@ -3708,7 +3748,8 @@ fap_packet_t* fapint_create_packet()
 	result->path_len = 0;
 	
 	result->latitude = NULL;    
-	result->longitude = NULL;   
+	result->longitude = NULL;
+	result->format = NULL;
 	result->pos_resolution = NULL;
 	result->pos_ambiguity = NULL;
 	result->dao_datum_byte = 0;

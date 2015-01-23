@@ -1,3 +1,9 @@
+libfap 0.8
+
+   * Implemented improvements introduced in Perl module version 1.15
+
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Thu, 06 May 2010 12:36:29 +0300
+
 libfap 0.7
 
    * Empty string turned out to be invalid regex on POSIX. Some regexes were
@@ -23,41 +29,41 @@ libfap 0.7
    * Added error code for non-APRS packet
    * Fixed incorrectly applied Base-91-DAO
 
- -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Sat Apr  3 2010 10:24:18 +0300
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Sat, 03 Apr 2010 10:24:18 +0300
 
 libfap 0.6
 
    * Implemented improvements introduced in new Perl module version (1.13)
 
- -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Fri Dec 11 2009 20:13:27 +0200
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Fri, 11 Dec 2009 20:13:27 +0200
 
 libfap 0.5
 
    * Type incompatibility warning fixed from parse_mice()
 
- -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Tue Oct 20 2009 10:19:50 +0300
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Tue, 20 Oct 2009 10:19:50 +0300
 
 libfap 0.4
 
    * Memory leak and use of uninitialized variables fixed from tnc2_to_kiss
 
- -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Mon Oct 19 2009 09:58:05 +0300
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Mon, 19 Oct 2009 09:58:05 +0300
 
 libfap 0.3
 
    * Path validation works now correctly also when is_ax25 flag is set
 
- -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Sat Oct 17 2009 09:42:58 +0300
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Sat, 17 Oct 2009 09:42:58 +0300
 
 libfap 0.2
 
    * Adjusted licensing to Artistic license or GPL
    * Added checks for out-of-memory situation
 
- -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Thu Oct 08 2009 07:38:12 +0300
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Thu, 08 Oct 2009 07:38:12 +0300
 
 libfap 0.1
 
    * Initial release
 
- -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Tue Oct  6 2009 18:16:27 +0300
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Tue, 06 Oct 2009 18:16:27 +0300

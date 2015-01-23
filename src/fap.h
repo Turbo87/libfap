@@ -1,7 +1,7 @@
-/* $Id: fap.h 162 2010-04-02 22:57:12Z oh2gve $
+/* $Id: fap.h 172 2010-05-06 09:50:16Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
- * Copyright 2007, 2008, 2009 Heikki Hannikainen
+ * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
+ * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
  *
  * Perl-to-C modifications 
  * Copyright 2009, 2010 Tapio Aaltonen
@@ -150,9 +150,18 @@ typedef enum
 	fapTELEMETRY_MESSAGE,
 	fapDX_SPOT,
 
-	fapEXPERIMENTAL,
+	fapEXPERIMENTAL
 } fap_packet_type_t;
 
+
+/// Position format type.
+typedef enum
+{
+	fapPOS_COMPRESSED,
+	fapPOS_UNCOMPRESSED,
+	fapPOS_MICE,
+	fapPOS_NMEA
+} fap_pos_format_t;
 
 
 /// Weather report type.
@@ -252,6 +261,8 @@ typedef struct
 	double* latitude;
 	/// Longitude, south is negative.
 	double* longitude;
+	/// Position format.
+	fap_pos_format_t* format;
 	/// Position resolution in meters.
 	double* pos_resolution;
 	/// Position ambiguity, number of digits.
