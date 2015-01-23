@@ -1,7 +1,7 @@
-/* $Id: helpers.h 133 2009-10-20 07:39:28Z oh2gve $
+/* $Id: helpers.h 136 2009-12-11 19:45:40Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008 Tapio Sokura
- * Copyright 2007, 2008 Heikki Hannikainen
+ * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
+ * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
  * Copyright 2009 Tapio Aaltonen

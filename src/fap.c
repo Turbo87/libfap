@@ -1,7 +1,7 @@
-/* $Id: fap.c 133 2009-10-20 07:39:28Z oh2gve $
+/* $Id: fap.c 136 2009-12-11 19:45:40Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008 Tapio Sokura
- * Copyright 2007, 2008 Heikki Hannikainen
+ * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
+ * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
  * Copyright 2009 Tapio Aaltonen
@@ -107,7 +107,7 @@ regex_t fapint_regex_header, fapint_regex_ax25call, fapint_regex_digicall;
 regex_t fapint_regex_normalpos, fapint_regex_normalamb, fapint_regex_timestamp;
 regex_t fapint_regex_mice_dstcall, fapint_regex_mice_body, fapint_regex_mice_amb;
 regex_t fapint_regex_comment, fapint_regex_phgr, fapint_regex_phg, fapint_regex_rng, fapint_regex_altitude;
-regex_t fapint_regex_mes_dst, fapint_regex_mes_ack, fapint_regex_mes_id;
+regex_t fapint_regex_mes_dst, fapint_regex_mes_ack, fapint_regex_mes_nack, fapint_regex_mes_id;
 regex_t fapint_regex_wx1, fapint_regex_wx2, fapint_regex_wx3, fapint_regex_wx4, fapint_regex_wx5;
 regex_t fapint_regex_wx_r1, fapint_regex_wx_r24, fapint_regex_wx_rami;
 regex_t fapint_regex_wx_humi, fapint_regex_wx_pres, fapint_regex_wx_lumi, fapint_regex_wx_what, fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any;
@@ -485,8 +485,8 @@ char* fap_explain_error(fap_error_code_t const error)
 {
 	switch (error)
 	{
-		case fapUNKNOWN:
-			return "Unsupported packet format";
+//		case fapUNKNOWN:
+//			return "Unsupported packet format";
 		case fapPACKET_NO:
 			return "No packet given to parse";
 		case fapPACKET_SHORT:
@@ -623,6 +623,8 @@ char* fap_explain_error(fap_error_code_t const error)
 		
 		case fapEXP_UNSUPP:
 			return "Unsupported experimental";
+		case fapSYM_INV_TABLE:
+			return "Invalid symbol table or overlay";
 			
 		case fapNOT_IMPLEMENTED:
 			return "Sorry, feature not implemented yet.";
@@ -1393,7 +1395,7 @@ void fap_init()
 		regcomp(&fapint_regex_ax25call, "^([A-Z0-9]{1,6})(-[0-9]{1,2}|)$", REG_EXTENDED);
 		regcomp(&fapint_regex_digicall, "^([a-zA-Z0-9-]{1,9})([*]?)$", REG_EXTENDED);
 
-		regcomp(&fapint_regex_normalpos, "^([0-9]{2})([0-7 ][0-9 ]\\.[0-9 ]{2})([NnSs])([\\/\\\\A-Z0-9])([0-9]{3})([0-7 ][0-9 ]\\.[0-9 ]{2})([EeWw])", REG_EXTENDED);
+		regcomp(&fapint_regex_normalpos, "^([0-9]{2})([0-7 ][0-9 ]\\.[0-9 ]{2})([NnSs])(.)([0-9]{3})([0-7 ][0-9 ]\\.[0-9 ]{2})([EeWw])(.)", REG_EXTENDED);
 		regcomp(&fapint_regex_normalamb, "^([0-9]{0,4})( {0,4})$", REG_EXTENDED);
 		regcomp(&fapint_regex_timestamp, "^([0-9]{2})([0-9]{2})([0-9]{2})([zh\\/])", REG_EXTENDED);
 
@@ -1409,6 +1411,7 @@ void fap_init()
 		
 		regcomp(&fapint_regex_mes_dst, "^:([A-Za-z0-9_ -]{9}):", REG_EXTENDED);
 		regcomp(&fapint_regex_mes_ack, "^ack([A-Za-z0-9}]{1,5}) *$", REG_EXTENDED);
+		regcomp(&fapint_regex_mes_nack, "^rej([A-Za-z0-9}]{1,5}) *$", REG_EXTENDED);
 		regcomp(&fapint_regex_mes_id, "^([^{]*)\\{([A-Za-z0-9}]{1,5}) *$", REG_EXTENDED);
 
 		regcomp(&fapint_regex_wx1, "^_{0,1}([0-9 \\.\\-]{3})\\/([0-9 \\.]{3})g([0-9 \\.]+)t(-{0,1}[0-9 \\.]+)", REG_EXTENDED);
@@ -1489,6 +1492,7 @@ void fap_cleanup()
 		
 		regfree(&fapint_regex_mes_dst);
 		regfree(&fapint_regex_mes_ack);
+		regfree(&fapint_regex_mes_nack);
 		regfree(&fapint_regex_mes_id);
 		
 		regfree(&fapint_regex_wx1);
@@ -1581,6 +1585,7 @@ void fap_free(fap_packet_t* packet)
 	if ( packet->destination ) { free(packet->destination); }
 	if ( packet->message ) { free(packet->message); }   
 	if ( packet->message_ack ) { free(packet->message_ack); }   
+	if ( packet->message_nack ) { free(packet->message_nack); }   
 	if ( packet->message_id ) { free(packet->message_id); }   
 	if ( packet->comment ) { free(packet->comment); }
 

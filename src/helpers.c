@@ -1,7 +1,7 @@
-/* $Id: helpers.c 132 2009-10-19 21:46:07Z oh2gve $
+/* $Id: helpers.c 136 2009-12-11 19:45:40Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008 Tapio Sokura
- * Copyright 2007, 2008 Heikki Hannikainen
+ * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
+ * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
  * Copyright 2009 Tapio Aaltonen
@@ -321,6 +321,9 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 		if ( packet->error_code ) *packet->error_code = fapMICE_INV;
 		return 0;
 	}
+	
+	/* Get symbol table. */
+	packet->symbol_table = input[6];
 
 	/* Validate body. */
 	/* "^[\x26-\x7f][\x26-\x61][\x1c-\x7f]{2}[\x1c-\x7d][\x1c-\x7f][\x21-\x7b\x7d][\/\\A-Z0-9]" */
@@ -335,7 +338,23 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 	if ( error || regexec(&fapint_regex_mice_body, input+7, 0, NULL, 0) != 0 )
 	{
 		packet->error_code = malloc(sizeof(fap_error_code_t));
-		if ( packet->error_code ) *packet->error_code = fapMICE_INV_INFO;
+		if ( packet->error_code )
+		{
+			/* Validate symbol table. */
+			if ( ( packet->symbol_table == '/' ) ||
+			     ( packet->symbol_table == '\\' ) ||
+			     ( packet->symbol_table >= 'A' && packet->symbol_table <= 'Z' ) ||
+			     isdigit(packet->symbol_table) )
+			{
+				// It's okay, we have some other error.
+				*packet->error_code = fapMICE_INV_INFO;
+			}
+			else
+			{
+				// It's not okay.
+				*packet->error_code = fapSYM_INV_TABLE;
+			}
+		}
 		return 0;
 	}
 	
@@ -561,8 +580,7 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 		*packet->course = course;
 	}
 	
-	/* Save symbol table and code. */
-	packet->symbol_table = input[6];
+	/* Save symbol code. */
 	packet->symbol_code = input[7];
 	
 	/* If there's something left, create working copy of it. */
@@ -955,7 +973,7 @@ int fapint_parse_normal(fap_packet_t* packet, char const* input)
 	char lat_deg[3], lat_min[6], lon_deg[4], lon_min[6], tmp_5b[5];
 	double lat, lon;
 	
-	unsigned int const matchcount = 8;
+	unsigned int const matchcount = 9;
 	regmatch_t matches[matchcount];
 
 	
@@ -998,6 +1016,22 @@ int fapint_parse_normal(fap_packet_t* packet, char const* input)
 	memcpy(lon_deg, input+matches[5].rm_so, 3);
 	memset(lon_min, 0, 6);
 	memcpy(lon_min, input+matches[6].rm_so, 5);
+	
+	/* Validate symbol table. */
+	if ( ( packet->symbol_table == '/' ) ||
+	     ( packet->symbol_table == '\\' ) ||
+	     ( packet->symbol_table >= 'A' && packet->symbol_table <= 'Z' ) ||
+	     isdigit(packet->symbol_table) )
+	{
+		// It's okay.
+	}
+	else
+	{
+		// It's not.
+		packet->error_code = malloc(sizeof(fap_error_code_t));
+		if ( packet->error_code ) *packet->error_code = fapSYM_INV_TABLE;
+		return 0;
+	}	
 	
 	/* Convert hemisphere indicators to numbers. */
 	if ( sind == 'S' ) is_south = 1;
@@ -1165,13 +1199,6 @@ void fapint_parse_comment(fap_packet_t* packet, char const* input, unsigned int 
 			memcpy(packet->phg, input+3, 5);
 			packet->phg[5] = 0;
 			
-			/* Validate PHGR. */
-			if ( strcmp(packet->phg, "00000") == 0 )
-			{
-				free(packet->phg);
-				packet->phg = NULL;
-			}
-
 			/* Save the rest. */
 			rest = fapint_remove_part(input, input_len, 0, 8, &rest_len);
 		}
@@ -1185,13 +1212,6 @@ void fapint_parse_comment(fap_packet_t* packet, char const* input, unsigned int 
 			memcpy(packet->phg, input+3, 4);
 			packet->phg[4] = 0;
 			
-			/* Validate PHG. */
-			if ( strcmp(packet->phg, "0000") == 0 )
-			{
-				free(packet->phg);
-				packet->phg = NULL;
-			}
-
 			/* Save the rest. */
 			rest = fapint_remove_part(input, input_len, 0, 7, &rest_len);
 		}
@@ -2138,7 +2158,7 @@ int fapint_parse_message(fap_packet_t* packet, char const* input, unsigned int c
 	memcpy(packet->message, input+11, len);
 	packet->message[len] = 0;
 	
-	/* Check if message is ack, save id if it is. */
+	/* Check if message is an ack, save id if it is. */
 	if ( regexec(&fapint_regex_mes_ack, packet->message, matchcount, (regmatch_t*)&matches, 0) == 0 )
 	{
 		len = matches[1].rm_eo - matches[1].rm_so;
@@ -2146,6 +2166,16 @@ int fapint_parse_message(fap_packet_t* packet, char const* input, unsigned int c
 		if ( !packet->message_ack ) return 0;
 		memcpy(packet->message_ack, packet->message+matches[1].rm_so, len);
 		packet->message_ack[len] = 0;
+	}
+
+	/* Check if message is a nack, save id if it is. */
+	if ( regexec(&fapint_regex_mes_nack, packet->message, matchcount, (regmatch_t*)&matches, 0) == 0 )
+	{
+		len = matches[1].rm_eo - matches[1].rm_so;
+		packet->message_nack = malloc(len+1);
+		if ( !packet->message_nack ) return 0;
+		memcpy(packet->message_nack, packet->message+matches[1].rm_so, len);
+		packet->message_nack[len] = 0;
 	}
 	
 	/* Separate message-id from the body, if present. */
@@ -3629,6 +3659,7 @@ fap_packet_t* fapint_create_packet()
 	result->destination = NULL;
 	result->message = NULL;
 	result->message_ack = NULL;
+	result->message_nack = NULL;
 	result->message_id = NULL;
 	result->comment = NULL;
 	result->comment_len = 0;

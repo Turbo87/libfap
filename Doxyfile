@@ -1,5 +1,5 @@
 # Doxyfile 1.5.6
-# $Id: Doxyfile 133 2009-10-20 07:39:28Z oh2gve $
+# $Id: Doxyfile 136 2009-12-11 19:45:40Z oh2gve $
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project
@@ -32,7 +32,7 @@ PROJECT_NAME           = libfap
 # This could be handy for archiving the generated documentation or 
 # if some version control system is used.
 
-PROJECT_NUMBER         = 0.5
+PROJECT_NUMBER         = 0.6
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 

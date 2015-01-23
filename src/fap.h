@@ -1,7 +1,7 @@
-/* $Id: fap.h 126 2009-10-17 06:11:48Z oh2gve $
+/* $Id: fap.h 136 2009-12-11 19:45:40Z oh2gve $
  *
- * Copyright 2005, 2006, 2007, 2008 Tapio Sokura
- * Copyright 2007, 2008 Heikki Hannikainen
+ * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
+ * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications 
  * Copyright 2009 Tapio Aaltonen
@@ -46,7 +46,7 @@ extern "C" {
 /// Packet error code type.
 typedef enum
 {
-	fapUNKNOWN,
+//	fapUNKNOWN,
 	fapPACKET_NO,
 	fapPACKET_SHORT,
 	fapPACKET_NOBODY,
@@ -125,6 +125,7 @@ typedef enum
 	fapTLM_UNSUPP,
 	
 	fapEXP_UNSUPP,
+	fapSYM_INV_TABLE,
 	
 	fapNOT_IMPLEMENTED,
 	fapNMEA_NOFIELDS
@@ -269,8 +270,10 @@ typedef struct
 	char* destination;
 	/// The actual message text.
 	char* message;
-	/// Id of the message which is acked by this packet.
+	/// Id of the message which is acked with this packet.
 	char* message_ack;
+	/// Id of the message which was rejected with this packet.
+	char* message_nack;
 	/// Id of this message.
 	char* message_id;
 	/// Station, object or item comment. No null termination.
