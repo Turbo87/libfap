@@ -7,6 +7,6 @@ make install
 
 For detailed installation instructions see the INSTALL file.
 
-Usage info is available at http://pakettiradio.net/libfap/docs/ (or run
-doxygen to generate a local copy of those pages under doc/html/) or see the
+Usage info is available at http://pakettiradio.net/libfap/docs/ or run
+doxygen to generate a local copy of those pages. When in doubt, see the
 fap.h header file directly.

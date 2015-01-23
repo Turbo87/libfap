@@ -1,10 +1,10 @@
-/* $Id: fap.h 136 2009-12-11 19:45:40Z oh2gve $
+/* $Id: fap.h 162 2010-04-02 22:57:12Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
  * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications 
- * Copyright 2009 Tapio Aaltonen
+ * Copyright 2009, 2010 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -46,7 +46,6 @@ extern "C" {
 /// Packet error code type.
 typedef enum
 {
-//	fapUNKNOWN,
 	fapPACKET_NO,
 	fapPACKET_SHORT,
 	fapPACKET_NOBODY,
@@ -128,7 +127,9 @@ typedef enum
 	fapSYM_INV_TABLE,
 	
 	fapNOT_IMPLEMENTED,
-	fapNMEA_NOFIELDS
+	fapNMEA_NOFIELDS,
+	
+	fapNO_APRS
 } fap_error_code_t;
 
 
@@ -185,6 +186,12 @@ typedef struct
 	double* pressure;
 	/// Luminosity in watts per square meter.
 	unsigned int* luminosity;
+	
+	/// Show depth increasement from last day, in millimeters.
+	double* snow_24h;
+	
+	/// Software type indicator.
+	char* soft;
 } fap_wx_report_t;
 
 
@@ -253,11 +260,11 @@ typedef struct
 	char dao_datum_byte;
 
 	/// Altitude in meters.
-	int* altitude;
+	double* altitude;
 	/// Course in degrees, zero is unknown and 360 is north.
 	unsigned int* course;
 	/// Land speed in km/h.
-	unsigned int* speed;
+	double* speed;
 
 	/// Symbol table designator. 0x00 = undef.
 	char symbol_table;
@@ -277,6 +284,12 @@ typedef struct
 	/// Id of this message.
 	char* message_id;
 	/// Station, object or item comment. No null termination.
+	/**
+	 * Here's a difference between Perl module and C library. Perl
+	 * module removes whitespace characters from beginning and end of
+	 * the comment.  C library returns comment exactly as seen in
+	 * original packet.
+	*/
 	char* comment;
 	/// Length of comment.
 	unsigned int comment_len;
@@ -335,12 +348,14 @@ typedef struct
  * \param input TNC-2 mode APRS packet string.
  * \param input_len Amount of bytes in input.
  * \param is_ax25 If 1, packet is parsed as AX.25 network packet. If 0, packet is parsed as APRS-IS packet.
- * \return A packet is returned, use error_code or to check how parsing went. If library is not initialized, returns NULL.
+ * \return A packet is always returned, no matter how the parsing went. Use
+ * error_code to check how it did. If library is not initialized, returns
+ * NULL.
 */
 fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, short const is_ax25);
 
 
-/// Returns human-readable error message for given error code.
+/// Return human-readable error message for given error code.
 char* fap_explain_error(fap_error_code_t const error);
 
 /// Convert mic-e message bits (three numbers 0-2) to a textual message.
@@ -368,7 +383,7 @@ double fap_distance(double lon0, double lat0, double lon1, double lat1);
 double fap_direction(double lon0, double lat0, double lon1, double lat1);
 
 
-/// Counts amount of digihops the packet gone through.
+/// Count amount of digihops the packet has gone through.
 /**
  * The number returned is just an educated guess, not absolute truth.
  *
@@ -391,7 +406,7 @@ int fap_count_digihops(fap_packet_t const* packet);
 char* fap_check_ax25_call(char const* input, short const add_ssid0);
 
 
-/// Converts a KISS-frame into a TNC-2 compatible UI-frame.
+/// Convert a KISS-frame into a TNC-2 compatible UI-frame.
 /**
  * Non-UI and non-pid-F0 frames are dropped. The KISS-frame to be decoded
  * may or may not have a FEND (0xC0) character at beginning. If there's a
@@ -429,6 +444,20 @@ int fap_tnc2_to_kiss(char const* tnc2frame, unsigned int tnc2frame_len, unsigned
 
 
 /* Implementation-specific functions. */
+
+/// Convert raw AX.25 frame into TNC-2 compatible UI-frame.
+/**
+ * Params and return value work just like similar ones in fap_kiss_to_tnc2().
+*/
+int fap_ax25_to_tnc2(char const* ax25frame, unsigned int ax25frame_len,
+                     char* tnc2frame, unsigned int* tnc2frame_len);
+
+/// Convert TNC-2 compatible UI-frame into raw AX.25-frame.
+/**
+ * Params and return value work just like similar ones in fap_tnc2_to_kiss().
+*/
+int fap_tnc2_to_ax25(char const* tnc2frame, unsigned int tnc2frame_len,
+                     char* ax25frame, unsigned int* ax25frame_len);
 
 
 /// Custom free() for fap_packet_t*.

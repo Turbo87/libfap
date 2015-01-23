@@ -1,10 +1,10 @@
-/* $Id: helpers2.h 136 2009-12-11 19:45:40Z oh2gve $
+/* $Id: helpers2.h 161 2010-04-02 20:06:51Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
  * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009 Tapio Aaltonen
+ * Copyright 2009, 2010 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -38,7 +38,7 @@
 #define MPH_TO_KMH 1.609344
 
 /// Kilometers per hour to meters per second.
-#define KMH_TO_MS 10/36
+#define KMH_TO_MS 10.0/36.0
 
 /// Miles per hout to meters per second.
 #define MPH_TO_MS (MPH_TO_KMH * KMH_TO_MS)
@@ -47,7 +47,7 @@
 #define FT_TO_M 0.3048
 
 /// Fahrenheit to celcius degrees.
-#define FAHRENHEIT_TO_CELCIUS(x) ((x-32)/1.8)
+#define FAHRENHEIT_TO_CELCIUS(x) ((x-32.0)/1.8)
 
 /// Hundredths of an inch to millimeters
 #define HINCH_TO_MM 0.254
@@ -111,6 +111,9 @@ int fapint_check_date(unsigned int year, unsigned int month, unsigned int day);
 */
 int fapint_get_nmea_latlon(fap_packet_t* packet, char* field1, char* field2);
 
+
+/// Set all fields of given wx report to NULL.
+void fapint_init_wx_report(fap_wx_report_t* wx_report);
 
 
 #endif // HELPERS2_H

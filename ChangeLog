@@ -1,3 +1,30 @@
+libfap 0.7
+
+   * Empty string turned out to be invalid regex on POSIX. Some regexes were
+     adjusted to comply with this.
+   * Added functions for converting between raw AX.25-frames and TNC-2
+     compatible UI-frames
+   * Implemented automated tests using XS language and tests of the original
+     Perl module. And thanks to this:
+   * Fixed position resolution calculation for normalpos and mic-e packets
+     (it didn't happen at all)
+   * Fixed position calculation for normalpos packets with ambiguity of 3
+   * Normal or compressed pos is now detected also from first 40 chars of body
+   * Changed type of speed value from unsigned int to double
+   * Changed type of altitude value from int to double
+   * Fixed wx parser to support reports which begin with 'g'
+   * Changed mic-e packet symtable and symcode fields (they were mixed)
+   * Fixed mic-e packet speed calculation for large speeds
+   * Changed timestamp of GPRMC packet from local time to UTC
+   * Changed lat and lon of GPRMC packet with each other (they were mixed)
+   * Added support for snow and softare type into wx report
+   * Fixed rounding errors from Peet type wx packet parsing
+   * Improved message id detection to handle messages with non-printable chars
+   * Added error code for non-APRS packet
+   * Fixed incorrectly applied Base-91-DAO
+
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Sat Apr  3 2010 10:24:18 +0300
+
 libfap 0.6
 
    * Implemented improvements introduced in new Perl module version (1.13)
@@ -6,7 +33,7 @@ libfap 0.6
 
 libfap 0.5
 
-   * Type incompatibility warning fixed from parse_mice
+   * Type incompatibility warning fixed from parse_mice()
 
  -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Tue Oct 20 2009 10:19:50 +0300
 

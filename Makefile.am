@@ -1,4 +1,5 @@
-# $Id: Makefile.am 121 2009-10-07 11:17:07Z oh2gve $
+# $Id: Makefile.am 164 2010-04-03 07:05:41Z oh2gve $
 
-SUBDIRS = doc licenses src 
-EXTRA_DIST = reconf Doxyfile
+ACLOCAL_AMFLAGS = -I m4
+SUBDIRS = licenses src 
+EXTRA_DIST = Doxyfile

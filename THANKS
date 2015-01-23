@@ -3,3 +3,6 @@ APRS Parser. Absolutely fabulous work. Thanks for helping with the porting
 job too!
 
 Team OH3TR for providing equipment and facilites for testing.
+
+Frank, VE1FIS for reporting the issue with empty-string-regexs and for the
+idea of AX.25-frame conversion functions.

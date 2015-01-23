@@ -1,10 +1,10 @@
-/* $Id: helpers.h 136 2009-12-11 19:45:40Z oh2gve $
+/* $Id: helpers.h 139 2010-03-19 16:51:27Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
  * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009 Tapio Aaltonen
+ * Copyright 2009, 2010 Tapio Aaltonen
  *
  * This file is part of libfap.
  *

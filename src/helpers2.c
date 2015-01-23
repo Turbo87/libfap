@@ -1,10 +1,10 @@
-/* $Id: helpers2.c 136 2009-12-11 19:45:40Z oh2gve $
+/* $Id: helpers2.c 160 2010-04-02 17:18:19Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
  * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009 Tapio Aaltonen
+ * Copyright 2009, 2010 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -484,8 +484,9 @@ int fapint_get_nmea_latlon(fap_packet_t* packet, char* field1, char* field2)
 			{
 				value *= -1;
 			}
-			packet->latitude = malloc(sizeof(double));
-			*packet->latitude = value;
+			packet->longitude = malloc(sizeof(double));
+			if ( !packet->longitude ) return 0;
+			*packet->longitude = value;
 			return 1;
 		case 'N':
 		case 'S':
@@ -499,11 +500,31 @@ int fapint_get_nmea_latlon(fap_packet_t* packet, char* field1, char* field2)
 			{
 				value *= -1;
 			}
-			packet->longitude = malloc(sizeof(double));
-			if ( !packet->longitude ) return 0;
-			*packet->longitude = value;
+			packet->latitude = malloc(sizeof(double));
+			if ( !packet->latitude ) return 0;
+			*packet->latitude = value;
 			return 1;
 	}
 		
 	return 0;
+}
+
+
+
+void fapint_init_wx_report(fap_wx_report_t* wx_report)
+{
+	wx_report->wind_gust = NULL;
+	wx_report->wind_dir = NULL;
+	wx_report->wind_speed = NULL;
+	wx_report->temp = NULL;
+	wx_report->temp_in = NULL;
+	wx_report->rain_1h = NULL;
+	wx_report->rain_24h = NULL;
+	wx_report->rain_midnight = NULL;
+	wx_report->humidity = NULL;
+	wx_report->humidity_in = NULL;
+	wx_report->pressure = NULL;
+	wx_report->luminosity = NULL;
+	wx_report->snow_24h = NULL;
+	wx_report->soft = NULL;
 }

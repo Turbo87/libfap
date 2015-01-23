@@ -1,8 +1,8 @@
-/* $Id: smoketest.c 121 2009-10-07 11:17:07Z oh2gve $
+/* $Id: smoketest.c 162 2010-04-02 22:57:12Z oh2gve $
  *
  * This file contains an automatic smoke tester for libfap.
  * 
- * Copyright 2009 Tapio Aaltonen
+ * Copyright 2009, 2010 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -78,9 +78,9 @@ void print_packet(fap_packet_t* packet)
 	if ( packet->pos_ambiguity ) printf("pos_ambiguity: %d\n", *packet->pos_ambiguity);
 	if ( packet->dao_datum_byte ) printf("dao_datum_byte: %c\n", packet->dao_datum_byte);
 	
-	if ( packet->altitude ) printf("altitude: %d\n", *packet->altitude);
+	if ( packet->altitude ) printf("altitude: %f\n", *packet->altitude);
 	if ( packet->course ) printf("course: %d\n", *packet->course);
-	if ( packet->speed ) printf("speed: %d\n", *packet->speed);
+	if ( packet->speed ) printf("speed: %f\n", *packet->speed);
 
 	if ( packet->symbol_table ) printf("symbol_table: %c\n", packet->symbol_table);
 	if ( packet->symbol_code ) printf("symbol_code: %c\n", packet->symbol_code);
@@ -104,14 +104,33 @@ void print_packet(fap_packet_t* packet)
 	
 	if ( packet->wx_report )
 	{
-		printf("wx_report:");
-		printf("\n");
+		printf("wx_report:\n");
+		if ( packet->wx_report->wind_gust) printf("\twind_gust: %f\n", *packet->wx_report->wind_gust);
+		if ( packet->wx_report->wind_dir ) printf("\twind_dir: %d\n", *packet->wx_report->wind_dir);
+		if ( packet->wx_report->wind_speed ) printf("\twind_speed: %f\n", *packet->wx_report->wind_speed);
+		if ( packet->wx_report->temp ) printf("\ttemp: %f\n", *packet->wx_report->temp);
+		if ( packet->wx_report->temp_in ) printf("\ttemp_in: %f\n", *packet->wx_report->temp_in);
+		if ( packet->wx_report->rain_1h ) printf("\train_1h: %f\n", *packet->wx_report->rain_1h);
+		if ( packet->wx_report->rain_24h ) printf("\train_24h: %f\n", *packet->wx_report->rain_24h);
+		if ( packet->wx_report->rain_midnight ) printf("\train_midnight: %f\n", *packet->wx_report->rain_midnight);
+		if ( packet->wx_report->humidity ) printf("\thumidity: %d\n", *packet->wx_report->humidity);
+		if ( packet->wx_report->humidity_in ) printf("\thumidity_in: %d\n", *packet->wx_report->humidity_in);
+		if ( packet->wx_report->pressure ) printf("\tpressure: %f\n", *packet->wx_report->pressure);
+		if ( packet->wx_report->luminosity ) printf("\tluminosity: %d\n", *packet->wx_report->luminosity);
+		if ( packet->wx_report->snow_24h ) printf("\tsnow_24h: %f\n", *packet->wx_report->snow_24h);
+		if ( packet->wx_report->soft ) printf("\tsoft: %s\n", packet->wx_report->soft);
 	}
 	
 	if ( packet->telemetry )
 	{
-		printf("telemetry:");
-		printf("\n");
+		printf("telemetry:\n");
+		printf("\tseq: %d\n", packet->telemetry->seq);
+		printf("\tval1: %f\n", packet->telemetry->val1);
+		printf("\tval2: %f\n", packet->telemetry->val2);
+		printf("\tval3: %f\n", packet->telemetry->val3);
+		printf("\tval4: %f\n", packet->telemetry->val4);
+		printf("\tval5: %f\n", packet->telemetry->val5);
+		printf("\tbits: %s\n", packet->telemetry->bits);
 	}
 
 	if ( packet->messagebits ) printf("messagebits: %s (%s)\n", packet->messagebits, fap_mice_mbits_to_message(packet->messagebits));
@@ -223,6 +242,23 @@ int test_parser()
 	print_packet(packet);
 	printf("########################################\n");
 	fap_free(packet);
+	
+	memset(buffer, 0, BUFFER_LEN);
+	sprintf(buffer, "OH7AA-1>APRS,WIDE1-1,WIDE2-2,qAo,OH7AA::OH7LZB   :Testing, 1 2 3{42");
+	printf("########################################\n");
+	printf("Testing parser with packet (%s) ... ", buffer);
+	packet = fap_parseaprs(buffer, strlen(buffer), 0);
+	if ( packet->error_code )
+	{
+		printf("failed: %s\n", fap_explain_error(*packet->error_code));
+		retval = 0;
+	}
+	else printf("success\n");
+	print_packet(packet);
+	printf("########################################\n");
+	fap_free(packet);
+	
+	
 	
 	return retval;
 }

@@ -1,10 +1,10 @@
-/* $Id: fap.c 136 2009-12-11 19:45:40Z oh2gve $
+/* $Id: fap.c 162 2010-04-02 22:57:12Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
  * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009 Tapio Aaltonen
+ * Copyright 2009, 2010 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -38,7 +38,8 @@ int main()
 	fap_init();
 
 	// Read TNC2-formatted input for example from APRS-IS.
-
+	
+	// Process the packet.
 	packet = fap_parseaprs(input, input_len, 0);
 	if ( packet->error_code )
 	{
@@ -48,6 +49,7 @@ int main()
 	{
 		printf("Got packet from %s.\n", packet->src_callsign);
 	}
+	fap_free(packet);
 	
 	fap_cleanup();
 	
@@ -92,8 +94,8 @@ int main()
 #define TFEND 0xdc
 /// Escaped FESC.
 #define TFESC 0xdd
-/// Size of buffers reserved for KISS conversions.
-#define KISS_MAXLEN 512
+/// Size of buffers reserved for frame conversions.
+#define FRAME_MAXLEN 512
 
 /// UI-frame identification byte.
 #define AX25_FRAME_UI 0x03
@@ -107,7 +109,7 @@ regex_t fapint_regex_header, fapint_regex_ax25call, fapint_regex_digicall;
 regex_t fapint_regex_normalpos, fapint_regex_normalamb, fapint_regex_timestamp;
 regex_t fapint_regex_mice_dstcall, fapint_regex_mice_body, fapint_regex_mice_amb;
 regex_t fapint_regex_comment, fapint_regex_phgr, fapint_regex_phg, fapint_regex_rng, fapint_regex_altitude;
-regex_t fapint_regex_mes_dst, fapint_regex_mes_ack, fapint_regex_mes_nack, fapint_regex_mes_id;
+regex_t fapint_regex_mes_dst, fapint_regex_mes_ack, fapint_regex_mes_nack;
 regex_t fapint_regex_wx1, fapint_regex_wx2, fapint_regex_wx3, fapint_regex_wx4, fapint_regex_wx5;
 regex_t fapint_regex_wx_r1, fapint_regex_wx_r24, fapint_regex_wx_rami;
 regex_t fapint_regex_wx_humi, fapint_regex_wx_pres, fapint_regex_wx_lumi, fapint_regex_wx_what, fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any;
@@ -206,17 +208,22 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 	{
 		result->type = malloc(sizeof(fap_packet_type_t));
 		if ( !result->type ) return result;
-		*result->type = fapMICE;
+		*result->type = fapLOCATION; /* not fapMICE, lol */
 		fapint_parse_mice(result, body+1, body_len-1);
 	}
 	/* Check for normal or compressed location packet. */
 	else if ( typechar == '!' || typechar == '=' || typechar == '/' || typechar == '@' )
 	{
 		/* Check for messaging. */
+		result->messaging = malloc(sizeof(short));
+		if ( !result->messaging ) return result;
 		if ( typechar == '=' || typechar == '@' )
 		{
-			result->messaging = malloc(sizeof(short));
 			*result->messaging = 1;
+		}
+		else
+		{
+			*result->messaging = 0;
 		}
 		/* Validate body. */
 		if ( body_len >= 14 )
@@ -323,7 +330,7 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 		{
 			result->type = malloc(sizeof(fap_packet_type_t));
 			if ( !result->type ) return result;
-			*result->type = fapNMEA;
+			*result->type = fapLOCATION; /* not fapNMEA, lol */
 			fapint_parse_nmea(result, body+1, body_len-1);
 		}
 		else if ( body_len > 5 && body[0] == '$' && body[1] == 'U' && body[2] == 'L' && body[3] == 'T' && body[4] == 'W' )
@@ -431,8 +438,7 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 		/* Come here to avoid the "when all else fails" option. */
 	}
 	/* When all else fails, try to look for a !-position that can occur
-		anywhere within the 40 first characters according to the spec. */
-		 
+	   anywhere within the 40 first characters according to the spec. */
 	else
 	{
 		tmp = strchr(body, '!');
@@ -462,7 +468,7 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 				/* It's normal position. */
 				if ( body_len - (pos+1) >= 19 )
 				{
-					i = fapint_parse_normal(result, body);
+					i = fapint_parse_normal(result, tmp+1);
 					/* Check for comment. */
 					if ( body_len - (pos+1) > 19 && i && result->symbol_code != '_' )
 					{
@@ -470,6 +476,12 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 					}
 				}
 			}
+		}
+		else
+		{
+			/* No luck. It's propably not APRS packet at all. */
+			result->error_code = malloc(sizeof(fap_error_code_t));
+			if ( result->error_code ) *result->error_code = fapNO_APRS;
 		}
 	}
 	
@@ -485,8 +497,6 @@ char* fap_explain_error(fap_error_code_t const error)
 {
 	switch (error)
 	{
-//		case fapUNKNOWN:
-//			return "Unsupported packet format";
 		case fapPACKET_NO:
 			return "No packet given to parse";
 		case fapPACKET_SHORT:
@@ -630,6 +640,9 @@ char* fap_explain_error(fap_error_code_t const error)
 			return "Sorry, feature not implemented yet.";
 		case fapNMEA_NOFIELDS:
 			return "No fields in NMEA fields in NMEA packet.";
+
+		case fapNO_APRS:
+			return "Not an APRS packet";
 	}
 
 	return "This message never appears.";
@@ -858,18 +871,14 @@ char* fap_check_ax25_call(char const* input, short const add_ssid0)
 int fap_kiss_to_tnc2(char const* kissframe, unsigned int kissframe_len,
                      char* tnc2frame, unsigned int* tnc2frame_len, unsigned int* tnc_id)
 {
-	char input[KISS_MAXLEN];
+	char input[FRAME_MAXLEN];
 	unsigned int input_len = 0;
 	
-	char output[2*KISS_MAXLEN];
+	char output[2*FRAME_MAXLEN];
 	unsigned int output_len = 0;
 	
-	int i, j, retval = 1, escape_mode;
-	char *checked_call, *dst_callsign = NULL;
-	int part_no, header_len, ssid, digi_count;
-	char tmp_callsign[10];
-	char charri;
-	
+	int i = 0, j = 0, escape_mode = 0;
+
 	/* Check that we got params. */
 	if ( !kissframe || !kissframe_len || !tnc2frame || !tnc2frame_len || !tnc_id )
 	{
@@ -877,7 +886,7 @@ int fap_kiss_to_tnc2(char const* kissframe, unsigned int kissframe_len,
 	}
 	
 	/* Check that frame is short enough. */
-	if ( kissframe_len >= KISS_MAXLEN )
+	if ( kissframe_len >= FRAME_MAXLEN )
 	{
 		sprintf(output, "Too long KISS frame.");
 		output_len = strlen(output)+1;
@@ -912,7 +921,6 @@ int fap_kiss_to_tnc2(char const* kissframe, unsigned int kissframe_len,
 	}
 	
 	/* Perform byte unstuffing. */
-	escape_mode = 0;
 	j = 0;
 	for ( i = 0; i < kissframe_len; ++i )
 	{
@@ -941,11 +949,55 @@ int fap_kiss_to_tnc2(char const* kissframe, unsigned int kissframe_len,
 		++j;
 	}
 	input_len = j;
-	
+
 	/* Length checking _after_ byte unstuffing. */
 	if ( input_len < 16 )
 	{
-		sprintf(output, "Too short frame (%d bytes after unstuffing).", input_len);
+		sprintf(output, "Too short KISS frame (%d bytes after unstuffing).", input_len);
+		output_len = strlen(output)+1;
+		if ( output_len > *tnc2frame_len ) output_len = *tnc2frame_len;
+		memcpy(tnc2frame, output, output_len);
+		*tnc2frame_len = output_len;
+		return 0;
+	}
+	
+	// Now we have an AX.25-frame, let's parse it.
+	return fap_ax25_to_tnc2(input, input_len, tnc2frame, tnc2frame_len);
+}
+
+
+
+int fap_ax25_to_tnc2(char const* ax25frame, unsigned int ax25frame_len,
+                     char* tnc2frame, unsigned int* tnc2frame_len)
+{
+	int i, j, retval = 1;
+	char *checked_call, *dst_callsign = NULL;
+	int part_no, header_len, ssid, digi_count;
+	char tmp_callsign[10];
+	char charri;
+
+	char output[2*FRAME_MAXLEN];
+	unsigned int output_len = 0;
+	
+	/* Check that we got params. */
+	if ( !ax25frame || !ax25frame_len || !tnc2frame || !tnc2frame_len )
+	{
+		return 0;
+	}
+	
+	/* Check that frame size is good. */
+	if ( ax25frame_len >= FRAME_MAXLEN )
+	{
+		sprintf(output, "Too long AX.25 frame.");
+		output_len = strlen(output)+1;
+		if ( output_len > *tnc2frame_len ) output_len = *tnc2frame_len;
+		memcpy(tnc2frame, output, output_len);
+		*tnc2frame_len = output_len;
+		return 0;
+	}
+	if ( ax25frame_len < 16 )
+	{
+		sprintf(output, "Too short AX.25 frame (%d bytes).", ax25frame_len);
 		output_len = strlen(output)+1;
 		if ( output_len > *tnc2frame_len ) output_len = *tnc2frame_len;
 		memcpy(tnc2frame, output, output_len);
@@ -959,9 +1011,9 @@ int fap_kiss_to_tnc2(char const* kissframe, unsigned int kissframe_len,
 	memset(tmp_callsign, 0, 10);
 	digi_count = 0;
 	j = 0;
-	for ( i = 0; i < input_len; ++i )
+	for ( i = 0; i < ax25frame_len; ++i )
 	{
-		charri = input[i];
+		charri = ax25frame[i];
 		
 		if ( part_no == 0 )
 		{
@@ -1106,8 +1158,65 @@ int fap_kiss_to_tnc2(char const* kissframe, unsigned int kissframe_len,
 int fap_tnc2_to_kiss(char const* tnc2frame, unsigned int tnc2frame_len, unsigned int const tnc_id,
                      char* kissframe, unsigned int* kissframe_len)
 {
-	char output[KISS_MAXLEN];
-	unsigned int output_len;
+	char ax25frame[2*FRAME_MAXLEN];
+	unsigned int ax25frame_len;
+	int i;
+
+	/* Initialize slot for starting FEND and tnc id by skipping two first bytes of buffer. */
+	ax25frame_len = 2*FRAME_MAXLEN-2;
+	
+	// Convert into AX.25-frame.
+	if ( !fap_tnc2_to_ax25(tnc2frame, tnc2frame_len, ax25frame+2, &ax25frame_len) )
+	{
+		strcpy(kissframe, ax25frame);
+		*kissframe_len = ax25frame_len;
+		return 0;
+	}
+	ax25frame_len += 2;
+	
+	/* Perform byte stuffing. */
+	*kissframe_len = 0;
+	for ( i = 0; i < ax25frame_len; ++i )
+	{
+		if ( (ax25frame[i] & 0xff) == FEND || (ax25frame[i] & 0xff) == FESC )
+		{
+			kissframe[*kissframe_len] = FESC;
+			(*kissframe_len)++;
+			if ( (ax25frame[i] & 0xff) == FEND )
+			{
+				kissframe[*kissframe_len] = TFEND;
+			}
+			else
+			{
+				kissframe[*kissframe_len] = TFESC;
+			}
+			(*kissframe_len)++;
+		}
+		else
+		{
+			kissframe[*kissframe_len] = ax25frame[i];
+			(*kissframe_len)++;
+		}
+	}
+	
+	/* Put FENDs and tnc id in place. */
+	kissframe[0] = FEND;
+	kissframe[1] = tnc_id;
+	kissframe[*kissframe_len] = FEND;
+	(*kissframe_len)++;
+	
+	return 1;
+}
+
+
+
+int fap_tnc2_to_ax25(char const* tnc2frame, unsigned int tnc2frame_len,
+                     char* ax25frame, unsigned int* ax25frame_len)
+{
+	char input[FRAME_MAXLEN];
+	
+	char output[2*FRAME_MAXLEN];
+	unsigned int output_len = 0;
 
 	char *header = NULL, *digipeaters = NULL, *body = NULL;
 	unsigned int digi_count, body_len;
@@ -1126,23 +1235,22 @@ int fap_tnc2_to_kiss(char const* tnc2frame, unsigned int tnc2frame_len, unsigned
 	
 	
 	/* Check params. */
-	if ( !tnc2frame || !tnc2frame_len || !kissframe || !kissframe_len )
+	if ( !tnc2frame || !tnc2frame_len || tnc2frame_len >= FRAME_MAXLEN || !ax25frame || !ax25frame_len )
 	{  
 		return 0;
 	}
 	
-	/* Initialize slot for starting FEND and tnc id. */
-	output[0] = 0;
-	output[1] = 0;
-	output_len = 2;
+	/* Create working copy of input. */
+	memset(input, 0, FRAME_MAXLEN);
+	memcpy(input, tnc2frame, tnc2frame_len );
 	
 	/* Separate header and body. */
-	if ( regexec(&fapint_regex_kiss_hdrbdy, tnc2frame, matchcount, (regmatch_t*)&matches, 0) == 0 )
+	if ( regexec(&fapint_regex_kiss_hdrbdy, input, matchcount, (regmatch_t*)&matches, 0) == 0 )
 	{
 		len = matches[1].rm_eo - matches[1].rm_so;
 		header = malloc(len+1);
 		if ( !header ) return 0;
-		memcpy(header, tnc2frame+matches[1].rm_so, len);
+		memcpy(header, input+matches[1].rm_so, len);
 		header[len] = 0;
 		
 		body_len = matches[2].rm_eo - matches[2].rm_so;
@@ -1152,15 +1260,15 @@ int fap_tnc2_to_kiss(char const* tnc2frame, unsigned int tnc2frame_len, unsigned
 			free(header);
 			return 0;
 		}
-		memcpy(body, tnc2frame+matches[2].rm_so, body_len);
+		memcpy(body, input+matches[2].rm_so, body_len);
 	}
 	else
 	{
 		sprintf(output, "Failed to separate header and body of TNC-2 packet.");
 		output_len = strlen(output)+1;
-		if ( output_len > *kissframe_len ) output_len = *kissframe_len;
-		strcpy(kissframe, output);
-		*kissframe_len = output_len;
+		if ( output_len > *ax25frame_len ) output_len = *ax25frame_len;
+		strcpy(ax25frame, output);
+		*ax25frame_len = output_len;
 		return 0;
 	}
 	
@@ -1350,37 +1458,10 @@ int fap_tnc2_to_kiss(char const* tnc2frame, unsigned int tnc2frame_len, unsigned
 		return 0;
 	}
 	
-	/* Perform byte stuffing. */
-	*kissframe_len = 0;
-	for ( i = 0; i < output_len; ++i )
-	{
-		if ( (output[i] & 0xff) == FEND || (output[i] & 0xff) == FESC )
-		{
-			kissframe[*kissframe_len] = FESC;
-			(*kissframe_len)++;
-			if ( (output[i] & 0xff) == FEND )
-			{
-				kissframe[*kissframe_len] = TFEND;
-			}
-			else
-			{
-				kissframe[*kissframe_len] = TFESC;
-			}
-			(*kissframe_len)++;
-		}
-		else
-		{
-			kissframe[*kissframe_len] = output[i];
-			(*kissframe_len)++;
-		}
-	}
-	
-	/* Put FENDs and tnc id in place. */
-	kissframe[0] = FEND;
-	kissframe[1] = tnc_id;
-	kissframe[*kissframe_len] = FEND;
-	(*kissframe_len)++;
-	
+	/* Return result. */
+	if ( output_len > *ax25frame_len ) output_len = *ax25frame_len;
+	memcpy(ax25frame, output, output_len);
+	*ax25frame_len = output_len;
 	return 1;
 }
 
@@ -1392,7 +1473,7 @@ void fap_init()
 	{
 		/* Compile regexs. */
 		regcomp(&fapint_regex_header, "^([A-Z0-9\\-]{1,9})>(.*)$", REG_EXTENDED);
-		regcomp(&fapint_regex_ax25call, "^([A-Z0-9]{1,6})(-[0-9]{1,2}|)$", REG_EXTENDED);
+		regcomp(&fapint_regex_ax25call, "^([A-Z0-9]{1,6})(-[0-9]{1,2}|())$", REG_EXTENDED);
 		regcomp(&fapint_regex_digicall, "^([a-zA-Z0-9-]{1,9})([*]?)$", REG_EXTENDED);
 
 		regcomp(&fapint_regex_normalpos, "^([0-9]{2})([0-7 ][0-9 ]\\.[0-9 ]{2})([NnSs])(.)([0-9]{3})([0-7 ][0-9 ]\\.[0-9 ]{2})([EeWw])(.)", REG_EXTENDED);
@@ -1412,13 +1493,12 @@ void fap_init()
 		regcomp(&fapint_regex_mes_dst, "^:([A-Za-z0-9_ -]{9}):", REG_EXTENDED);
 		regcomp(&fapint_regex_mes_ack, "^ack([A-Za-z0-9}]{1,5}) *$", REG_EXTENDED);
 		regcomp(&fapint_regex_mes_nack, "^rej([A-Za-z0-9}]{1,5}) *$", REG_EXTENDED);
-		regcomp(&fapint_regex_mes_id, "^([^{]*)\\{([A-Za-z0-9}]{1,5}) *$", REG_EXTENDED);
 
 		regcomp(&fapint_regex_wx1, "^_{0,1}([0-9 \\.\\-]{3})\\/([0-9 \\.]{3})g([0-9 \\.]+)t(-{0,1}[0-9 \\.]+)", REG_EXTENDED);
 		regcomp(&fapint_regex_wx2, "^_{0,1}c([0-9 \\.\\-]{3})s([0-9 \\.]{3})g([0-9 \\.]+)t(-{0,1}[0-9 \\.]+)", REG_EXTENDED);
 		regcomp(&fapint_regex_wx3, "^_{0,1}([0-9 \\.\\-]{3})\\/([0-9 \\.]{3})t(-{0,1}[0-9 \\.]+)", REG_EXTENDED);
 		regcomp(&fapint_regex_wx4, "^_{0,1}([0-9 \\.\\-]{3})\\/([0-9 \\.]{3})g([0-9 \\.]+)", REG_EXTENDED);
-		regcomp(&fapint_regex_wx5, "t(-{0,1}[0-9]{1,3})", REG_EXTENDED);
+		regcomp(&fapint_regex_wx5, "^g([0-9]+)t(-?[0-9 \\.]{1,3})", REG_EXTENDED);
  
 		regcomp(&fapint_regex_wx_r1, "r([0-9]{1,3})", REG_EXTENDED);
 		regcomp(&fapint_regex_wx_r24, "p([0-9]{1,3})", REG_EXTENDED);
@@ -1434,18 +1514,18 @@ void fap_init()
 		
 		regcomp(&fapint_regex_nmea_chksum, "^([:print:]+)\\*([0-9A-F]{2})", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_dst, "^(GPS|SPC)([A-Z0-9]{2,3})", REG_EXTENDED);
-		regcomp(&fapint_regex_nmea_time, "^[:space:]*([0-9]{2})([0-9]{2})([0-9]{2})(|\\.[0-9]+)[:space:]*$", REG_EXTENDED);
+		regcomp(&fapint_regex_nmea_time, "^[:space:]*([0-9]{2})([0-9]{2})([0-9]{2})(()|\\.[0-9]+)[:space:]*$", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_date, "^[:space:]*([0-9]{2})([0-9]{2})([0-9]{2})[:space:]*$", REG_EXTENDED);
 
-		regcomp(&fapint_regex_nmea_specou, "^[:space:]*([0-9]+(|\\.[0-9]+))[:space:]*$", REG_EXTENDED);
+		regcomp(&fapint_regex_nmea_specou, "^[:space:]*([0-9]+(()|\\.[0-9]+))[:space:]*$", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_fix, "^[:space:]*([0-9]+)[:space:]*$", REG_EXTENDED);
-		regcomp(&fapint_regex_nmea_altitude, "^(-?[0-9]+(|\\.[0-9]+))$", REG_EXTENDED);
+		regcomp(&fapint_regex_nmea_altitude, "^(-?[0-9]+(()|\\.[0-9]+))$", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_flag, "^[:space:]*([NSEWnsew])[:space:]*$", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_coord, "^[:space:]*([0-9]{1,3})([0-5][0-9]\\.([0-9]+))[:space:]*$", REG_EXTENDED);
 
-		regcomp(&fapint_regex_telemetry, "^([0-9]+),(-|)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+|),(-|)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+|),(-|)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+|),(-|)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+|),(-|)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+|),([01]{0,8})", REG_EXTENDED);
+		regcomp(&fapint_regex_telemetry, "^([0-9]+),(-?)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+)?,(-?)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+)?,(-?)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+)?,(-?)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+)?,(-?)([0-9]{1,6}|[0-9]+\\.[0-9]+|\\.[0-9]+)?,([01]{0,8})", REG_EXTENDED);
 		regcomp(&fapint_regex_peet_splitter, "^([0-9a-f]{4}|----)", REG_EXTENDED|REG_ICASE);
-		regcomp(&fapint_regex_kiss_callsign, "^([A-Z0-9]+) *(|-[0-9]+)$", REG_EXTENDED);
+		regcomp(&fapint_regex_kiss_callsign, "^([A-Z0-9]+) *(-[0-9]+)?$", REG_EXTENDED);
 
 		regcomp(&fapint_regex_detect_comp, "^[\\/\\\\A-Za-j]$", REG_EXTENDED|REG_NOSUB);
 		regcomp(&fapint_regex_detect_wx, "^_([0-9]{8})c[- .0-9]{1,3}s[- .0-9]{1,3}", REG_EXTENDED|REG_NOSUB);
@@ -1453,8 +1533,8 @@ void fap_init()
 		regcomp(&fapint_regex_detect_exp, "^\\{\\{", REG_EXTENDED|REG_NOSUB);
 	
 		regcomp(&fapint_regex_kiss_hdrbdy, "^([A-Z0-9,*>-]+):(.+)$", REG_EXTENDED);
-		regcomp(&fapint_regex_hdr_detail, "^([A-Z0-9]{1,6})(-[0-9]{1,2}|)>([A-Z0-9]{1,6})(-[0-9]{1,2}|)(|,.*)$", REG_EXTENDED);
-		regcomp(&fapint_regex_kiss_digi, "^([A-Z0-9]{1,6})(-[0-9]{1,2}|)(\\*|)$", REG_EXTENDED);
+		regcomp(&fapint_regex_hdr_detail, "^([A-Z0-9]{1,6})(-[0-9]{1,2})?>([A-Z0-9]{1,6})(-[0-9]{1,2})?(,.*)?$", REG_EXTENDED);
+		regcomp(&fapint_regex_kiss_digi, "^([A-Z0-9]{1,6})(-[0-9]{1,2})?(\\*)?$", REG_EXTENDED);
 		
 		regcomp(&fapint_regex_hopcount1, "^([A-Z0-9-]+)\\*$", REG_EXTENDED);
 		regcomp(&fapint_regex_hopcount2, "^WIDE([1-7])-([0-7])$", REG_EXTENDED);
@@ -1493,7 +1573,6 @@ void fap_cleanup()
 		regfree(&fapint_regex_mes_dst);
 		regfree(&fapint_regex_mes_ack);
 		regfree(&fapint_regex_mes_nack);
-		regfree(&fapint_regex_mes_id);
 		
 		regfree(&fapint_regex_wx1);
 		regfree(&fapint_regex_wx2);
@@ -1616,6 +1695,10 @@ void fap_free(fap_packet_t* packet)
 		
 		if ( packet->wx_report->pressure ) { free(packet->wx_report->pressure); }
 		if ( packet->wx_report->luminosity ) { free(packet->wx_report->luminosity); }
+
+		if ( packet->wx_report->snow_24h ) { free(packet->wx_report->snow_24h); }
+
+		if ( packet->wx_report->soft ) { free(packet->wx_report->soft); }
 
 		free(packet->wx_report);
 	}

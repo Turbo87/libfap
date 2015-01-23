@@ -1,10 +1,10 @@
-/* $Id: helpers.c 136 2009-12-11 19:45:40Z oh2gve $
+/* $Id: helpers.c 163 2010-04-02 23:24:33Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009 Tapio Sokura
  * Copyright 2007, 2008, 2009 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009 Tapio Aaltonen
+ * Copyright 2009, 2010 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <regex.h>
 #include <ctype.h>
 #include <math.h>
@@ -323,7 +324,7 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 	}
 	
 	/* Get symbol table. */
-	packet->symbol_table = input[6];
+	packet->symbol_table = input[7];
 
 	/* Validate body. */
 	/* "^[\x26-\x7f][\x26-\x61][\x1c-\x7f]{2}[\x1c-\x7d][\x1c-\x7f][\x21-\x7b\x7d][\/\\A-Z0-9]" */
@@ -405,13 +406,10 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 		return 0;
 	}
   
-	/* Calculate position resolution, if there is ambiguity. */
-	if ( *packet->pos_ambiguity > 0 )
-	{
-		packet->pos_resolution = malloc(sizeof(double));
-		if ( !packet->pos_resolution ) return 0;
-		*packet->pos_resolution = fapint_get_pos_resolution(2 - *packet->pos_ambiguity);
-	}
+	/* Calculate position resolution. */
+	packet->pos_resolution = malloc(sizeof(double));
+	if ( !packet->pos_resolution ) return 0;
+	*packet->pos_resolution = fapint_get_pos_resolution(2 - *packet->pos_ambiguity);
 	
 	/* Convert the latitude to the midvalue if position ambiguity is used. */
 	if ( *packet->pos_ambiguity >= 4 )
@@ -553,14 +551,14 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 	/* Now onto speed and course. */
 	speed = (input[3] - 28) * 10;
 	course_speed = input[4] - 28;
-	course_speed_tmp = course_speed / 10;
+	course_speed_tmp = floor(course_speed / 10);
 	speed += course_speed_tmp;
 	course_speed -= course_speed_tmp * 10;
 	course = 100 * course_speed;
 	course += input[5] - 28;
 	
 	/* Some adjustment. */
-	if ( speed >= 800 );
+	if ( speed >= 800 )
 	{
 		speed -= 800;
 	}
@@ -570,7 +568,7 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 	}
   
 	/* Save values. */
-	packet->speed = malloc(sizeof(unsigned int));
+	packet->speed = malloc(sizeof(double));
 	if ( !packet->speed ) return 0;
 	*packet->speed = speed * KNOT_TO_KMH;
 	if ( course >= 0 )
@@ -581,7 +579,7 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 	}
 	
 	/* Save symbol code. */
-	packet->symbol_code = input[7];
+	packet->symbol_code = input[6];
 	
 	/* If there's something left, create working copy of it. */
 	if ( (len = input_len - 8) > 0 )
@@ -609,7 +607,7 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 				  rest[i+3] == '}' )
 			{
 				/* Save altitude. */
-				packet->altitude = malloc(sizeof(int));
+				packet->altitude = malloc(sizeof(double));
 				if ( !packet->altitude )
 				{
 					free(rest);
@@ -929,7 +927,7 @@ int fapint_parse_compressed(fap_packet_t* packet, char const* input)
 	{
 		/* cs is altitude. */
 		cs = c1 * 91 + s1;
-		packet->altitude = malloc(sizeof(int));
+		packet->altitude = malloc(sizeof(double));
 		if ( !packet->altitude ) return 0;
 		/* Convert directly to meters. */
 		*packet->altitude = pow(1.002, cs) * 0.3048;
@@ -949,7 +947,7 @@ int fapint_parse_compressed(fap_packet_t* packet, char const* input)
 			*packet->course = c1 * 4;
 		}
 		/* Convert directly to km/h. */
-		packet->speed = malloc(sizeof(unsigned int));
+		packet->speed = malloc(sizeof(double));
 		if ( !packet->speed ) return 0;
 		*packet->speed = ( pow(1.08, s1) - 1 ) * KNOT_TO_KMH;
 	}
@@ -1099,9 +1097,11 @@ int fapint_parse_normal(fap_packet_t* packet, char const* input)
 			*packet->longitude = lon + atof(lon_min)/60;
 			break;
 		case 3:
-			/* Single minute digit is set to 5. */
-			lat_min[1] = 5;
-			lon_min[1] = 5;
+			/* Single minute digit is set to 5, minute decimals are ignored. */
+			lat_min[1] = '5';
+			memset(lat_min+2, 0, 4);
+			lon_min[1] = '5';
+			memset(lon_min+2, 0, 4);
 			*packet->latitude = lat + atof(lat_min)/60;
 			*packet->longitude = lon + atof(lon_min)/60;
 			break;
@@ -1121,13 +1121,10 @@ int fapint_parse_normal(fap_packet_t* packet, char const* input)
 		*packet->longitude = 0 - *packet->longitude;
 	}
 	
-	/* Calculate position resolution, if there is ambiguity. */
-	if ( *packet->pos_ambiguity > 0 )
-	{
-		packet->pos_resolution = malloc(sizeof(double));
-		if ( !packet->pos_resolution ) return 0;
-		*packet->pos_resolution = fapint_get_pos_resolution(2 - *packet->pos_ambiguity);
-	}
+	/* Calculate position resolution based on position ambiguity. */
+	packet->pos_resolution = malloc(sizeof(double));
+	if ( !packet->pos_resolution ) return 0;
+	*packet->pos_resolution = fapint_get_pos_resolution(2 - *packet->pos_ambiguity);
 	
 	return 1;
 }
@@ -1180,7 +1177,7 @@ void fapint_parse_comment(fap_packet_t* packet, char const* input, unsigned int 
 				if ( isdigit(speed[0]) && isdigit(speed[1]) && isdigit(speed[2]) )
 				{
 					tmp_s = atoi(&speed[0]);
-					packet->speed = malloc(sizeof(unsigned int));
+					packet->speed = malloc(sizeof(double));
 					if ( !packet->speed ) return;
 					*packet->speed = tmp_s * KNOT_TO_KMH;
 				}
@@ -1259,7 +1256,7 @@ void fapint_parse_comment(fap_packet_t* packet, char const* input, unsigned int 
 				memcpy(altitude, rest+matches[1].rm_so, 6);
 				altitude[6] = 0;
 				tmp_s = atoi(altitude);
-				packet->altitude = malloc(sizeof(int));
+				packet->altitude = malloc(sizeof(double));
 				*packet->altitude = tmp_s * FT_TO_M;
 			}
 		
@@ -1599,14 +1596,14 @@ int fapint_parse_nmea(fap_packet_t* packet, char const* input, unsigned int cons
 				timestamp.tm_mday = day;
 				timestamp.tm_mon = month-1;
 				timestamp.tm_year = year-1900;
-				timestamp.tm_isdst = -1;
+				timestamp.tm_isdst = 0;
 				packet->timestamp = malloc(sizeof(time_t));
 				if ( !packet->timestamp )
 				{
 					retval = 0;
 					break;
 				}
-				*packet->timestamp = mktime(&timestamp);
+				*packet->timestamp = (time_t)mktime(&timestamp) - (time_t)timezone;
 			}
 			
 			/* Get speed, if available. */
@@ -1622,13 +1619,13 @@ int fapint_parse_nmea(fap_packet_t* packet, char const* input, unsigned int cons
 				memcpy(tmp_str, nmea_fields[7]+matches[1].rm_so, len);
 				tmp_str[len] = 0;
 				
-				packet->speed = malloc(sizeof(unsigned int));
+				packet->speed = malloc(sizeof(double));
 				if ( !packet->speed )
 				{
 					retval = 0;
 					break;
 				}
-				*packet->speed = atof(tmp_str) * KNOT_TO_KMH + 0.5;
+				*packet->speed = atof(tmp_str) * KNOT_TO_KMH;
 				free(tmp_str); tmp_str = NULL;
 			}
 			
@@ -1781,7 +1778,7 @@ int fapint_parse_nmea(fap_packet_t* packet, char const* input, unsigned int cons
 				}
 				memcpy(tmp_str, nmea_fields[8]+matches[1].rm_so, len);
 				tmp_str[len] = 0;
-				packet->altitude = malloc(sizeof(int));
+				packet->altitude = malloc(sizeof(double));
 				if ( !packet->altitude )
 				{
 					retval = 0;
@@ -2089,6 +2086,7 @@ int fapint_parse_message(fap_packet_t* packet, char const* input, unsigned int c
 {
 	int i, len;
 	char* tmp;
+	short skipping_spaces = 1;
 					
 	unsigned int const matchcount = 3;
 	regmatch_t matches[matchcount];
@@ -2179,34 +2177,63 @@ int fapint_parse_message(fap_packet_t* packet, char const* input, unsigned int c
 	}
 	
 	/* Separate message-id from the body, if present. */
-	if ( regexec(&fapint_regex_mes_id, packet->message, matchcount, (regmatch_t*)&matches, 0) == 0 )
+	len = 0;
+	for ( i = strlen(packet->message)-1; i >= 0 ; i-- )
 	{
-		/* Remove message id from message. */
-		len = matches[1].rm_eo - matches[1].rm_so;
-		tmp = packet->message;
-		packet->message = malloc(len+1);
-		if ( !packet->message )
-		{
-			free(tmp);
-			return 0;
-		}
-		memcpy(packet->message, tmp+matches[1].rm_so, len);
-		packet->message[len] = 0;
+	        if ( skipping_spaces && !isspace(packet->message[i]) )
+	        {
+	                /* Last non-space char of the id. */
+	                skipping_spaces = 0;
+	        }
+	        else if ( skipping_spaces )
+	        {
+	                continue;
+                }
+                
+                /* New char of id. First check that it can be part of id. */
+                if ( !(isalnum(packet->message[i]) || packet->message[i] == '{') )
+                {
+                        break;
+                }
+                
+                /* Check that we're not too long yet. */
+                len++;
+                if ( len > 6 )
+                {
+                        break;
+                }
+                
+                /* Check if id starts here. */
+                if ( packet->message[i] == '{' )
+                {
+        		/* Create copy of message without the id. */
+	        	tmp = packet->message;
+        		packet->message = malloc(i+1);
+        		if ( !packet->message )
+        		{
+        			free(tmp);
+        			return 0;
+        		}
+        		memcpy(packet->message, tmp, i);
+        		packet->message[i] = 0;
 		
-		/* Save message id. */
-		len = matches[2].rm_eo - matches[2].rm_so;
-		packet->message_id = malloc(len+1);
-		if ( !packet->message_id )
-		{
-			free(tmp);
-			return 0;
-		}
-		memcpy(packet->message_id, tmp+matches[2].rm_so, len);
-		packet->message_id[len] = 0;
-		
-		free(tmp);
-	}
-	
+        		/* Save message id. */
+        		packet->message_id = malloc(len+1);
+	        	if ( !packet->message_id )
+	        	{
+        			free(tmp);
+	        		return 0;
+        		}
+	        	memcpy(packet->message_id, tmp+i+1, len);
+	        	packet->message_id[len] = 0;
+	        	
+	        	/* Get rid of the old message. */
+        		free(tmp);
+
+                        break;
+                }
+        }
+        
 	/* Catch telemetry messages. */
 	if ( strcmp(packet->src_callsign, packet->destination) == 0 &&
 		  ( strstr(packet->message, "BITS.") != NULL ||
@@ -2424,10 +2451,10 @@ int fapint_parse_wx(fap_packet_t* packet, char const* input, unsigned int const 
 	int len, retval = 1;
 	char* rest = NULL, *tmp_str;
 	unsigned int rest_len, tmp_us;
-
+	
 	unsigned int const matchcount = 5;
 	regmatch_t matches[matchcount];
-
+        
 	/* Check that we have something to look at. */
 	if ( !packet || !input || !input_len )
 	{
@@ -2523,6 +2550,26 @@ int fapint_parse_wx(fap_packet_t* packet, char const* input, unsigned int const 
 
 		rest = fapint_remove_part(input, input_len, 0, matches[3].rm_eo, &rest_len);
 	}
+	else if ( regexec(&fapint_regex_wx5, input, 3, matches, 0) == 0 )
+	{
+	        len = matches[1].rm_eo - matches[1].rm_so;
+	        wind_gust = malloc(len+1);
+	        if ( !wind_gust ) return 0;
+	        memcpy(wind_gust, input+matches[1].rm_so, len);
+	        wind_gust[len] = 0;
+	        
+	        len = matches[2].rm_eo - matches[2].rm_so;
+	        temp = malloc(len+1);
+	        if ( !temp )
+	        {
+	                free(wind_gust);
+	                return 0;
+                }
+                memcpy(temp, input+matches[2].rm_so, len);
+                temp[len] = 0;
+                
+                rest = fapint_remove_part(input, input_len, 0, matches[2].rm_eo, &rest_len);
+        }
 	else
 	{
 		return 0;
@@ -2556,18 +2603,7 @@ int fapint_parse_wx(fap_packet_t* packet, char const* input, unsigned int const 
 		if ( rest ) free(rest);
 		return 0;
 	}
-	packet->wx_report->wind_gust = NULL;
-	packet->wx_report->wind_dir = NULL;
-	packet->wx_report->wind_speed = NULL;
-	packet->wx_report->temp = NULL;
-	packet->wx_report->temp_in = NULL;
-	packet->wx_report->rain_1h = NULL;
-	packet->wx_report->rain_24h = NULL;
-	packet->wx_report->rain_midnight = NULL;
-	packet->wx_report->humidity = NULL;
-	packet->wx_report->humidity_in = NULL;
-	packet->wx_report->pressure = NULL;
-	packet->wx_report->luminosity = NULL;
+	fapint_init_wx_report(packet->wx_report);
 
 	/* Save values. */
 	do
@@ -2699,7 +2735,7 @@ int fapint_parse_wx(fap_packet_t* packet, char const* input, unsigned int const 
 		len = matches[1].rm_eo - matches[1].rm_so;
 		memset(buf_5b, 0, 6);
 		memcpy(buf_5b, rest+matches[1].rm_so, len);
-		if ( (tmp_us = atoi(buf_5b)) > 1 && tmp_us <= 100 )
+		if ( (tmp_us = atoi(buf_5b)) <= 100 )
 		{
 			packet->wx_report->humidity = malloc(sizeof(unsigned int));
 			if ( !packet->wx_report->humidity )
@@ -2707,7 +2743,8 @@ int fapint_parse_wx(fap_packet_t* packet, char const* input, unsigned int const 
 		  		free(rest);
 		  		return 0;
 		  	}
-		  	*packet->wx_report->humidity = atoi(buf_5b);
+		  	if ( tmp_us == 0 ) tmp_us = 100;
+		  	*packet->wx_report->humidity = tmp_us;
 		}
 		
 		tmp_str = fapint_remove_part(rest, rest_len, matches[1].rm_so-1, matches[1].rm_eo, &tmp_us);
@@ -2772,6 +2809,18 @@ int fapint_parse_wx(fap_packet_t* packet, char const* input, unsigned int const 
 	/* Snowfall. */
 	if ( rest_len > 0 && regexec(&fapint_regex_wx_snow, rest, 2, matches, 0) == 0 )
 	{
+		len = matches[1].rm_eo - matches[1].rm_so;
+		if ( len > 5 ) len = 5;
+		memset(buf_5b, 0, 6);
+		memcpy(buf_5b, rest+matches[1].rm_so, len);
+		packet->wx_report->snow_24h = malloc(sizeof(double));
+		if ( !packet->wx_report->snow_24h )
+		{
+			free(rest);
+			return 0;
+		}
+		*packet->wx_report->snow_24h = atof(buf_5b) * HINCH_TO_MM;
+		
 		tmp_str = fapint_remove_part(rest, rest_len, matches[1].rm_so-1, matches[1].rm_eo, &tmp_us);
 		free(rest);
 		rest = tmp_str;
@@ -2796,15 +2845,46 @@ int fapint_parse_wx(fap_packet_t* packet, char const* input, unsigned int const 
 		rest_len = tmp_us;
 	}
 	
-	/* If there's still something left, we can't really know what it is. Let's save it as comment if there's no comment yet. */
-	if ( rest_len > 0 )
+	/* If there's still something left, we can't know what it is. We do some guesswork nevertheless. */
+	
+	/* Check if it could be wx software id. */
+	if ( rest_len >= 3 && rest_len <= 5 )
 	{
-		if ( packet->comment == NULL )
-		{
-			packet->comment = rest;
-			packet->comment_len = rest_len;
-		}
+	        /* Check for NULL. */
+	        retval = 1;
+	        for ( tmp_us = 0; tmp_us < rest_len; tmp_us++ )
+	        {
+	                if ( !rest[tmp_us] ) retval = 0;
+                }
+                if ( retval )
+                {
+                        /* No NULL(s). */
+                        packet->wx_report->soft = rest;
+                }
+                else
+                {
+                        /* It had NULL(s), it's just a comment. */
+                        if ( packet->comment == NULL )
+                        {
+                                packet->comment = rest;
+                                packet->comment_len = rest_len;
+                        }
+                        else
+                        {
+                                free(rest);
+                        }
+                }
+        }
+        /* If not, it is propaby a comment. */
+        else if ( rest_len > 0 && packet->comment == NULL )
+        {
+        	packet->comment = rest;
+       		packet->comment_len = rest_len;
 	}
+	else
+	{
+	        free(rest);
+        }
 
 	return 1;
 }
@@ -2986,18 +3066,7 @@ int fapint_parse_wx_peet_logging(fap_packet_t* packet, char const* input)
 		fapint_clear_llist(parts);
 		return 0;
 	}
-	packet->wx_report->wind_gust = NULL;
-	packet->wx_report->wind_dir = NULL;
-	packet->wx_report->wind_speed = NULL;
-	packet->wx_report->temp = NULL;
-	packet->wx_report->temp_in = NULL;
-	packet->wx_report->rain_1h = NULL;
-	packet->wx_report->rain_24h = NULL;
-	packet->wx_report->rain_midnight = NULL;
-	packet->wx_report->humidity = NULL;
-	packet->wx_report->humidity_in = NULL;
-	packet->wx_report->pressure = NULL;
-	packet->wx_report->luminosity = NULL;
+	fapint_init_wx_report(packet->wx_report);
 	
 	/* Check parts one at a time. */
 	do
@@ -3013,7 +3082,7 @@ int fapint_parse_wx_peet_logging(fap_packet_t* packet, char const* input)
 				retval = 0;
 				break;
 			}
-			*packet->wx_report->wind_speed = strtol(current_elem->text, NULL, 16) * KMH_TO_MS / 10;
+			*packet->wx_report->wind_speed = strtol(current_elem->text, NULL, 16) * KMH_TO_MS / 10.0;
 		}
 		current_elem = current_elem->next;
 	
@@ -3028,7 +3097,7 @@ int fapint_parse_wx_peet_logging(fap_packet_t* packet, char const* input)
 					retval = 0;
 					break;
 				}
-				*packet->wx_report->wind_dir = strtol(current_elem->text, NULL, 16) * 1.41176;
+				*packet->wx_report->wind_dir = floor(strtol(current_elem->text, NULL, 16) * 1.41176 + 0.5);
 			}
 			current_elem = current_elem->next;
 		}
@@ -3088,7 +3157,7 @@ int fapint_parse_wx_peet_logging(fap_packet_t* packet, char const* input)
 					retval = 0;
 					break;
 				}
-				*packet->wx_report->pressure = strtol(current_elem->text, NULL, 16) / 10;
+				*packet->wx_report->pressure = strtol(current_elem->text, NULL, 16) / 10.0;
 			}
 			current_elem = current_elem->next;
 		}
@@ -3189,7 +3258,7 @@ int fapint_parse_wx_peet_logging(fap_packet_t* packet, char const* input)
 		/* avg wind speed */
 		if ( current_elem->text )
 		{
-			*packet->wx_report->wind_speed = strtol(current_elem->text, NULL, 16) * KMH_TO_MS / 10;
+			*packet->wx_report->wind_speed = strtol(current_elem->text, NULL, 16) * KMH_TO_MS / 10.0;
 		}
 		current_elem = current_elem->next;
 		}
@@ -3208,6 +3277,7 @@ int fapint_parse_wx_peet_packet(fap_packet_t* packet, char const* input)
 	unsigned int part_count;
 
 	int i, retval = 1;
+	int16_t temp;
 
 	unsigned int matchcount = 2;
 	regmatch_t matches[matchcount];
@@ -3266,18 +3336,12 @@ int fapint_parse_wx_peet_packet(fap_packet_t* packet, char const* input)
 	
 	/* Prepare to return results. */
 	packet->wx_report = malloc(sizeof(fap_wx_report_t));
-	packet->wx_report->wind_gust = NULL;
-	packet->wx_report->wind_dir = NULL;
-	packet->wx_report->wind_speed = NULL;
-	packet->wx_report->temp = NULL;
-	packet->wx_report->temp_in = NULL;
-	packet->wx_report->rain_1h = NULL;
-	packet->wx_report->rain_24h = NULL;
-	packet->wx_report->rain_midnight = NULL;
-	packet->wx_report->humidity = NULL;
-	packet->wx_report->humidity_in = NULL;
-	packet->wx_report->pressure = NULL;
-	packet->wx_report->luminosity = NULL;
+	if ( !packet->wx_report )
+	{
+	        fapint_clear_llist(parts);
+	        return 0;
+        }
+	fapint_init_wx_report(packet->wx_report);
 	
 	/* Check parts one at a time. */
 	do
@@ -3293,7 +3357,7 @@ int fapint_parse_wx_peet_packet(fap_packet_t* packet, char const* input)
 				retval = 0;
 				break;
 			}
-			*packet->wx_report->wind_gust = strtol(current_elem->text, NULL, 16) * KMH_TO_MS / 10;
+			*packet->wx_report->wind_gust = strtol(current_elem->text, NULL, 16) * KMH_TO_MS / 10.0;
 		}
 		current_elem = current_elem->next;
 	
@@ -3308,7 +3372,7 @@ int fapint_parse_wx_peet_packet(fap_packet_t* packet, char const* input)
 					retval = 0;
 					break;
 				}
-				*packet->wx_report->wind_dir = strtol(current_elem->text, NULL, 16) * 1.41176;
+				*packet->wx_report->wind_dir = floor(strtol(current_elem->text, NULL, 16) * 1.41176 + 0.5);
 			}
 			current_elem = current_elem->next;
 		}
@@ -3328,7 +3392,8 @@ int fapint_parse_wx_peet_packet(fap_packet_t* packet, char const* input)
 					retval = 0;
 					break;
 				}
-				*packet->wx_report->temp = FAHRENHEIT_TO_CELCIUS(strtol(current_elem->text, NULL, 16)/10.0);
+				temp = strtol(current_elem->text, NULL, 16);
+				*packet->wx_report->temp = FAHRENHEIT_TO_CELCIUS(temp/10.0);
 			}
 			current_elem = current_elem->next;
 		}
@@ -3368,7 +3433,7 @@ int fapint_parse_wx_peet_packet(fap_packet_t* packet, char const* input)
 					retval = 0;
 					break;
 				}
-				*packet->wx_report->pressure = strtol(current_elem->text, NULL, 16) / 10;
+				*packet->wx_report->pressure = strtol(current_elem->text, NULL, 16) / 10.0;
 			}
 			current_elem = current_elem->next;
 		}
@@ -3505,12 +3570,12 @@ int fapint_parse_dao(fap_packet_t* packet, char input[3])
 			if ( !packet->pos_resolution ) return 0;
 		}
 		*packet->pos_resolution = fapint_get_pos_resolution(3);
-		lat_off = (input[1]-48) * 0.001 / 60;
-		lon_off = (input[2]-48) * 0.001 / 60;
+		lat_off = (input[1]-48.0) * 0.001 / 60.0;
+		lon_off = (input[2]-48.0) * 0.001 / 60.0;
 	}
 	else if ( 'a' <= input[0] && input[0] <= 'z' &&
-		 0x21 <= input[1] && input[1] <= 0x7b &&
-		 0x21 <= input[2] && input[2] <= 0x7b )
+	          0x21 <= input[1] && input[1] <= 0x7b &&
+                  0x21 <= input[2] && input[2] <= 0x7b )
 	{
 		/* Base-91. */
 		packet->dao_datum_byte = toupper(input[0]); /* Save in uppercase. */
@@ -3521,11 +3586,11 @@ int fapint_parse_dao(fap_packet_t* packet, char input[3])
 		}
 		*packet->pos_resolution = fapint_get_pos_resolution(4);
 		/* Scale base-91. */
-		lat_off = (input[1]-33)/91 * 0.001 / 60;
-		lon_off = (input[2]-33)/91 * 0.001 / 60;
+		lat_off = (input[1]-33.0)/91.0 * 0.01 / 60.0;
+		lon_off = (input[2]-33.0)/91.0 * 0.01 / 60.0;
 	}
 	else if ( 0x21 <= input[0] && input[0] <= 0x7b &&
-				 input[1] == ' ' && input[2] == ' ' )
+	          input[1] == ' ' && input[2] == ' ' )
 	{
 		/* Only datum information, no lat/lon digits. */
 		if ( 'a' <= input[0] && input[0] <= 'z' )

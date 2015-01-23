@@ -1,7 +1,5 @@
-# $Id: Makefile.am 111 2009-10-05 11:00:50Z oh2gve $
+# $Id: Makefile.am 164 2010-04-03 07:05:41Z oh2gve $
 
-# Real men use this.
-AM_CFLAGS = -Wall -Werror
 
 # Set library version info from configure.ac
 libfap_la_LDFLAGS= -version-info $(FAP_LIBRARY_VERSION)
