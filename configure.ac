@@ -1,4 +1,4 @@
-AC_INIT(APRS parser,1.2,OH2GVE,libfap)
+AC_INIT(APRS parser,1.3,OH2GVE,libfap)
 
 dnl iface version[:implementation version[:iface backward compatibility count]]
 FAP_LIBRARY_VERSION=5:0:0

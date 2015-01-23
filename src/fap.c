@@ -1,4 +1,4 @@
-/* $Id: fap.c 200 2011-05-22 16:42:29Z oh2gve $
+/* $Id: fap.c 203 2011-11-20 05:50:04Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -93,7 +93,7 @@ int main()
 /// Degrees to radians.
 #define DEG2RAD(x) (x/360*2*PI)
 /// Radians to degrees.
-#define RAD2DEG(x) (x*2*PI*360)
+#define RAD2DEG(x) (x*(180/PI))
 
 /// KISS frame start and end delimeter.
 #define FEND 0xc0
@@ -1517,12 +1517,12 @@ int fap_tnc2_to_ax25(char const* tnc2frame, unsigned int tnc2frame_len,
 					if ( tmp_str )
 					{
 						/* More digipeaters to follow. */
-						output[output_len] = 0x60 | (digicall_ssid_num << 1);
+						output[output_len] = 0x60 | (digicall_ssid_num << 1) | hbit;
 					}
 					else
 					{
 						/* Last digipeater. */
-						output[output_len] = 0x61 | (digicall_ssid_num << 1);
+						output[output_len] = 0x61 | (digicall_ssid_num << 1) | hbit;
 					}
 					output_len++;
 				}
