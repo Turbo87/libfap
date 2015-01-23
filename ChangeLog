@@ -1,3 +1,12 @@
+libfap 1.0
+
+   * Re-implemented WX report software ID detection to match Perl module
+   * Fixed position resolution calculation for whole degree ambiguity case
+   * Added error message for too short compressed packet
+   * Clarified licensing terms
+
+ -- Tapio Aaltonen, OH2GVE <oh2gve@pakettiradio.net> Mon, 17 Jan 2011 14:01:15 +0200
+
 libfap 0.9
 
    * Now matching Perl module version 1.17

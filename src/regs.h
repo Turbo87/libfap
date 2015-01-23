@@ -1,16 +1,24 @@
-/* $Id: regs.h 176 2010-10-11 07:42:58Z oh2gve $
+/* $Id: regs.h 179 2011-01-17 12:38:00Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010 Tapio Aaltonen
+ * Copyright 2009, 2010, 2011 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
- * Libfap may be copied only under the terms of either the Artistic License
- * or the GNU General Public License, which may be found in the libfap
- * source kit.
+ * Libfap is free software; you can redistribute it and/or modify it under the
+ * terms of either:
+ *
+ * a) the GNU General Public License as published by the Free Software
+ * Foundation; either version 1, or (at your option) any later
+ * version, or
+ * 
+ * b) the "Artistic License". 
+ * 
+ * Both licenses can be found in the licenses directory of this source code
+ * package.
  *
  * APRS is a registered trademark of APRS Software and Bob Bruninga, WB4APR.
 */
@@ -34,7 +42,8 @@ extern regex_t fapint_regex_comment, fapint_regex_phgr, fapint_regex_phg, fapint
 extern regex_t fapint_regex_mes_dst, fapint_regex_mes_ack, fapint_regex_mes_nack;
 extern regex_t fapint_regex_wx1, fapint_regex_wx2, fapint_regex_wx3, fapint_regex_wx4, fapint_regex_wx5;
 extern regex_t fapint_regex_wx_r1, fapint_regex_wx_r24, fapint_regex_wx_rami;
-extern regex_t fapint_regex_wx_humi, fapint_regex_wx_pres, fapint_regex_wx_lumi, fapint_regex_wx_what, fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any;
+extern regex_t fapint_regex_wx_humi, fapint_regex_wx_pres, fapint_regex_wx_lumi, fapint_regex_wx_what;
+extern regex_t fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any, fapint_regex_wx_soft;
 extern regex_t fapint_regex_nmea_chksum, fapint_regex_nmea_dst, fapint_regex_nmea_time, fapint_regex_nmea_date;
 extern regex_t fapint_regex_nmea_specou, fapint_regex_nmea_fix, fapint_regex_nmea_altitude, fapint_regex_nmea_flag, fapint_regex_nmea_coord;
 extern regex_t fapint_regex_telemetry, fapint_regex_peet_splitter, fapint_regex_kiss_callsign;

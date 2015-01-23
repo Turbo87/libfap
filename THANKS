@@ -6,3 +6,6 @@ Team OH3TR for providing equipment and facilites for testing.
 
 Frank, VE1FIS for reporting the issue with empty-string-regexs and for the
 idea of AX.25-frame conversion functions.
+
+Andrew Elwell for pointing out the unclear licensing terms and creating the
+RPM package.

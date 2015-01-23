@@ -1,3 +1,13 @@
-Libfap may be copied only under the terms of either the Artistic License or
-the GNU General Public License. These licenses can be found in the licences
-directory of this package.
+Copyright 2009-2011 Tapio Aaltonen
+
+Libfap is free software; you can redistribute it and/or modify it under the
+terms of either:
+
+a) the GNU General Public License as published by the Free Software
+Foundation; either version 1, or (at your option) any later
+version, or
+
+b) the "Artistic License". 
+
+Both licenses can be found in the licenses directory of this source code
+package.

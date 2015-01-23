@@ -1,16 +1,24 @@
-/* $Id: fap.c 176 2010-10-11 07:42:58Z oh2gve $
+/* $Id: fap.c 179 2011-01-17 12:38:00Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010 Tapio Aaltonen
+ * Copyright 2009, 2010, 2011 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
- * Libfap may be copied only under the terms of either the Artistic License
- * or the GNU General Public License, which may be found in the libfap
- * source kit.
+ * Libfap is free software; you can redistribute it and/or modify it under the
+ * terms of either:
+ *
+ * a) the GNU General Public License as published by the Free Software
+ * Foundation; either version 1, or (at your option) any later
+ * version, or
+ * 
+ * b) the "Artistic License". 
+ * 
+ * Both licenses can be found in the licenses directory of this source code
+ * package.
  *
  * APRS is a registered trademark of APRS Software and Bob Bruninga, WB4APR.
 */
@@ -112,7 +120,8 @@ regex_t fapint_regex_comment, fapint_regex_phgr, fapint_regex_phg, fapint_regex_
 regex_t fapint_regex_mes_dst, fapint_regex_mes_ack, fapint_regex_mes_nack;
 regex_t fapint_regex_wx1, fapint_regex_wx2, fapint_regex_wx3, fapint_regex_wx4, fapint_regex_wx5;
 regex_t fapint_regex_wx_r1, fapint_regex_wx_r24, fapint_regex_wx_rami;
-regex_t fapint_regex_wx_humi, fapint_regex_wx_pres, fapint_regex_wx_lumi, fapint_regex_wx_what, fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any;
+regex_t fapint_regex_wx_humi, fapint_regex_wx_pres, fapint_regex_wx_lumi, fapint_regex_wx_what;
+regex_t fapint_regex_wx_snow, fapint_regex_wx_rrc, fapint_regex_wx_any, fapint_regex_wx_soft;
 regex_t fapint_regex_nmea_chksum, fapint_regex_nmea_dst, fapint_regex_nmea_time, fapint_regex_nmea_date;
 regex_t fapint_regex_nmea_specou, fapint_regex_nmea_fix, fapint_regex_nmea_altitude, fapint_regex_nmea_flag, fapint_regex_nmea_coord;
 regex_t fapint_regex_telemetry, fapint_regex_peet_splitter, fapint_regex_kiss_callsign, fapint_regex_kiss_digi;
@@ -134,8 +143,7 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 	unsigned int splitpos, body_len;
 	char* body;
 	char* tmp;
-	char poschar[2];
-	char typechar;
+	char poschar, typechar;
 	
 	/* Check initialization status. */
 	if ( !fapint_initialized )
@@ -261,27 +269,10 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 			if ( i )
 			{
 				/* Get position type character. */
-				poschar[0] = body[0]; poschar[1] = 0;
+				poschar = body[0];
 				
 				/* Detect position type. */
-				if ( regexec(&fapint_regex_detect_comp, poschar, 0, NULL, 0) == 0 )
-				{
-					/* It's compressed position. */
-					if ( body_len >= 13 )
-					{
-						i = fapint_parse_compressed(result, body);
-						/* Check for comment or wx report. */
-						if ( body_len > 13 && i && result->symbol_code != '_' )
-						{
-							fapint_parse_comment(result, body+13, body_len-13);
-						}
-						else if ( body_len > 13 && i )
-						{
-							fapint_parse_wx(result, body+13, body_len-13);
-						}
-					}
-				}
-				else if ( isdigit(body[0]) )
+				if ( poschar >= 48 && poschar <= 57 )
 				{
 					/* It's normal position. */
 					if ( body_len >= 19 )
@@ -298,7 +289,29 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 						}
 					}
 				}
-				else if ( body[0] == '!' )
+				else if ( poschar == 47 || poschar == 92 || (poschar >= 65 && poschar <= 90) || (poschar >= 97 && poschar <= 106) )
+				{
+					/* It's compressed position. */
+					if ( body_len >= 13 )
+					{
+						i = fapint_parse_compressed(result, body);
+						/* Check for comment or wx report. */
+						if ( body_len > 13 && i && result->symbol_code != '_' )
+						{
+							fapint_parse_comment(result, body+13, body_len-13);
+						}
+						else if ( body_len > 13 && i )
+						{
+							fapint_parse_wx(result, body+13, body_len-13);
+						}
+					}
+					else
+					{
+						result->error_code = malloc(sizeof(fap_error_code_t));
+						if ( result->error_code ) *result->error_code = fapCOMP_SHORT;
+					}
+				}
+				else if ( poschar == 33 )
 				{
 					/* Weather report from Ultimeter 2000 */
 					if ( result->type == NULL )
@@ -447,13 +460,13 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 			result->type = malloc(sizeof(fap_packet_type_t));
 			if ( !result->type ) return result;
 			*result->type = fapLOCATION;
-			poschar[0] = tmp[1]; poschar[1] = 0;
+			poschar = tmp[1];
 
 			/* Detect position type. */
-			if ( regexec(&fapint_regex_detect_comp, poschar, 0, NULL, 0) == 0 )
+			if ( poschar == 47 || poschar == 92 || (poschar >= 65 && poschar <= 90) || (poschar >= 97 && poschar <= 106) )
 			{
 				/* It's compressed position. */
-				if ( body_len - (pos+1) >= 13 )
+				if ( body_len >= pos + 1 + 13 )
 				{
 					i = fapint_parse_compressed(result, body+pos+1);
 					/* Check for comment. */
@@ -463,10 +476,10 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 					}
 				}
 			}
-			else if ( isdigit(poschar[0]) )
+			else if ( isdigit(poschar) )
 			{
 				/* It's normal position. */
-				if ( body_len - (pos+1) >= 19 )
+				if ( body_len >= pos + 1 + 19 )
 				{
 					i = fapint_parse_normal(result, tmp+1);
 					/* Check for comment. */
@@ -608,6 +621,8 @@ char* fap_explain_error(fap_error_code_t const error)
 		
 		case fapCOMP_INV:
 			return "Invalid compressed packet";
+		case fapCOMP_SHORT:
+			return "Short compressed packet";
 		
 		case fapMSG_INV:
 			return "Invalid message packet";
@@ -1516,9 +1531,11 @@ void fap_init()
 		regcomp(&fapint_regex_wx_pres, "b([0-9]{4,5})", REG_EXTENDED);
 		regcomp(&fapint_regex_wx_lumi, "([lL])([0-9]{1,3})", REG_EXTENDED);
 		regcomp(&fapint_regex_wx_what, "v([\\-\\+]{0,1}[0-9]+)", REG_EXTENDED);
+		
 		regcomp(&fapint_regex_wx_snow, "s([0-9]+)", REG_EXTENDED);
 		regcomp(&fapint_regex_wx_rrc, "#([0-9]+)", REG_EXTENDED);
 		regcomp(&fapint_regex_wx_any, "^([rPphblLs#][\\. ]{1,5})+", REG_EXTENDED);
+		regcomp(&fapint_regex_wx_soft, "^[a-zA-Z0-9\\-\\_]{3,5}$", REG_EXTENDED|REG_NOSUB);
 		
 		regcomp(&fapint_regex_nmea_chksum, "^(.+)\\*([0-9A-F]{2})$", REG_EXTENDED);
 		regcomp(&fapint_regex_nmea_dst, "^(GPS|SPC)([A-Z0-9]{2,3})", REG_EXTENDED);
@@ -1597,9 +1614,11 @@ void fap_cleanup()
 		regfree(&fapint_regex_wx_pres);
 		regfree(&fapint_regex_wx_lumi);
 		regfree(&fapint_regex_wx_what);
+		
 		regfree(&fapint_regex_wx_snow);
 		regfree(&fapint_regex_wx_rrc);
 		regfree(&fapint_regex_wx_any);
+		regfree(&fapint_regex_wx_soft);
 		
 		regfree(&fapint_regex_nmea_chksum);
 		regfree(&fapint_regex_nmea_dst);

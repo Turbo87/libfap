@@ -1,16 +1,24 @@
-/* $Id: helpers2.c 172 2010-05-06 09:50:16Z oh2gve $
+/* $Id: helpers2.c 179 2011-01-17 12:38:00Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
  *
  * Perl-to-C modifications
- * Copyright 2009, 2010 Tapio Aaltonen
+ * Copyright 2009, 2010, 2011 Tapio Aaltonen
  *
  * This file is part of libfap.
  *
- * Libfap may be copied only under the terms of either the Artistic License
- * or the GNU General Public License, which may be found in the libfap
- * source kit.
+ * Libfap is free software; you can redistribute it and/or modify it under the
+ * terms of either:
+ *
+ * a) the GNU General Public License as published by the Free Software
+ * Foundation; either version 1, or (at your option) any later
+ * version, or
+ * 
+ * b) the "Artistic License". 
+ * 
+ * Both licenses can be found in the licenses directory of this source code
+ * package.
  *
  * APRS is a registered trademark of APRS Software and Bob Bruninga, WB4APR.
 */
@@ -55,7 +63,16 @@ void fapint_clear_llist(fapint_llist_item_t* list)
 
 double fapint_get_pos_resolution(int const minute_digit_count)
 {
-	return KNOT_TO_KMH * 1000 * pow(10, -1*minute_digit_count);
+	double retval = KNOT_TO_KMH;
+	if ( minute_digit_count  <= -2 )
+	{
+		retval *= 600;
+	}
+	else
+	{
+		retval *= 1000;
+	}
+	return retval * pow(10, -1*minute_digit_count);
 }
 
 
