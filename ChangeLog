@@ -1,0 +1,30 @@
+libfap 0.5
+
+   * Type incompatibility warning fixed from parse_mice
+
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Tue Oct 20 2009 10:19:50 +0300
+
+libfap 0.4
+
+   * Memory leak and use of uninitialized variables fixed from tnc2_to_kiss
+
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Mon Oct 19 2009 09:58:05 +0300
+
+libfap 0.3
+
+   * Path validation works now correctly also when is_ax25 flag is set
+
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Sat Oct 17 2009 09:42:58 +0300
+
+libfap 0.2
+
+   * Adjusted licensing to Artistic license or GPL
+   * Added checks for out-of-memory situation
+
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Thu Oct 08 2009 07:38:12 +0300
+
+libfap 0.1
+
+   * Initial release
+
+ -- Tapio Aaltonen, OH2GVE  <oh2gve@pakettiradio.net> Tue Oct  6 2009 18:16:27 +0300
