@@ -1,4 +1,4 @@
-/* $Id: helpers.c 172 2010-05-06 09:50:16Z oh2gve $
+/* $Id: helpers.c 176 2010-10-11 07:42:58Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -48,6 +48,7 @@ int fapint_parse_header(fap_packet_t* packet, short const is_ax25)
 	fapint_llist_item_t* path;
 	int path_len;
 	fapint_llist_item_t* current_elem;
+	short seenq = 0;
 	
 	unsigned int const matchcount = 3;
 	regmatch_t matches[matchcount];
@@ -242,6 +243,22 @@ int fapint_parse_header(fap_packet_t* packet, short const is_ax25)
 				free(tmp);
 			}
 			
+			/* Save the callsign as originally given. */
+			len = strlen(current_elem->text);
+			packet->path[i] = malloc(len+1);
+			if ( !packet->path[i] )
+			{
+				retval = 0;
+				break;
+			}
+			strcpy(packet->path[i], current_elem->text);
+			
+			/* Check if this element was a q-construct. */
+			if ( !seenq && current_elem->text[0] == 'q' ) seenq = 1;
+		}
+		/* This includes accepting IPv6 addresses after q-construct. */
+		else if ( seenq && regexec(&fapint_regex_digicallv6, current_elem->text, 0, NULL, 0) == 0 )
+		{
 			/* Save the callsign as originally given. */
 			len = strlen(current_elem->text);
 			packet->path[i] = malloc(len+1);

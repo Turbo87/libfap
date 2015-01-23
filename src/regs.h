@@ -1,4 +1,4 @@
-/* $Id: regs.h 172 2010-05-06 09:50:16Z oh2gve $
+/* $Id: regs.h 176 2010-10-11 07:42:58Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -27,7 +27,7 @@
 #include <regex.h>
 
 
-extern regex_t fapint_regex_ax25call, fapint_regex_header, fapint_regex_digicall;
+extern regex_t fapint_regex_ax25call, fapint_regex_header, fapint_regex_digicall, fapint_regex_digicallv6;
 extern regex_t fapint_regex_normalpos, fapint_regex_normalamb, fapint_regex_timestamp;
 extern regex_t fapint_regex_mice_dstcall, fapint_regex_mice_body, fapint_regex_mice_amb;
 extern regex_t fapint_regex_comment, fapint_regex_phgr, fapint_regex_phg, fapint_regex_rng, fapint_regex_altitude;
