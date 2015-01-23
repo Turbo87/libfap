@@ -1,4 +1,4 @@
-/* $Id: fap.h 179 2011-01-17 12:38:00Z oh2gve $
+/* $Id: fap.h 187 2011-02-16 21:58:11Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -241,8 +241,6 @@ typedef struct
 {
 	/// Error code.
 	fap_error_code_t* error_code;
-	/// In case of error a detailed message may be available here.
-	char* error_message;
 	/// Packet type.
 	fap_packet_type_t* type;
 	
@@ -376,13 +374,18 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 
 
 /// Return human-readable error message for given error code.
-char* fap_explain_error(fap_error_code_t const error);
+/**
+ * \param error Error code from fap_packet_t.
+ * \param buffer Pre-allocated space for the message. Must be at least 60 bytes long.
+*/
+void fap_explain_error(fap_error_code_t const error, char* buffer);
 
 /// Convert mic-e message bits (three numbers 0-2) to a textual message.
 /**
- * \return Normally string, but NULL in case of error.
+ * \param bits Bits as returned by fap_parseaprs().
+ * \param buffer Pre-allocated space for the message. Must be at least 20 bytes long.
 */
-char* fap_mice_mbits_to_message(char* bits);
+void fap_mice_mbits_to_message(char const* bits, char* buffer);
 
 /// Calculate distance between given locations.
 /**

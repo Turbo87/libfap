@@ -1,4 +1,4 @@
-# $Id: Makefile.am 164 2010-04-03 07:05:41Z oh2gve $
+# $Id: Makefile.am 195 2011-02-26 09:41:12Z oh2gve $
 
 
 # Set library version info from configure.ac
@@ -12,12 +12,3 @@ libfap_la_SOURCES = fap.h fap.c regs.h helpers.h helpers.c helpers2.h helpers2.c
 # Include header file.
 library_includedir=$(includedir)
 library_include_HEADERS = fap.h
-
-
-# Specify test app.
-check_PROGRAMS = smoketest
-smoketest_SOURCES = smoketest.c fap.h
-smoketest_LDADD = -lfap
-EXTRA_DIST = smoketest.data
-# Run the test app automagically on make check.
-TESTS = $(check_PROGRAMS)

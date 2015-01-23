@@ -29,4 +29,10 @@ that making things look nice is a job for user of the parser, not the parser
 itself. This way you can also use the original comment as-is, if you want
 to.
 
+There is also one "accidental" difference. The error message field of the
+hash in Perl module is used only once in one specific NMEA error case. To
+avoid confusion with error code field and messages corresponding the codes,
+the error message field has been dropped from libfap.
+
+
 73 de OH2GVE

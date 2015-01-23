@@ -1,4 +1,4 @@
-/* $Id: fap.c 179 2011-01-17 12:38:00Z oh2gve $
+/* $Id: fap.c 187 2011-02-16 21:58:11Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -506,184 +506,261 @@ fap_packet_t* fap_parseaprs(char const* input, unsigned int const input_len, sho
 
 
 
-char* fap_explain_error(fap_error_code_t const error)
+void fap_explain_error(fap_error_code_t const error, char* output)
 {
+	/* Dummy check. */
+	if ( output == NULL )
+	{
+		return;
+	}
+	
 	switch (error)
 	{
 		case fapPACKET_NO:
-			return "No packet given to parse";
+			sprintf(output, "No packet given to parse");
+			break;
 		case fapPACKET_SHORT:
-			return "Too short packet";
+			sprintf(output, "Too short packet");
+			break;
 		case fapPACKET_NOBODY:
-			return "No body in packet";
-			
+			sprintf(output, "No body in packet");
+			break;
+		
 		case fapSRCCALL_NOAX25:
-			 return "Source callsign is not a valid AX.25 call";
+			sprintf(output, "Source callsign is not a valid AX.25 call");
+			break;
 		case fapSRCCALL_BADCHARS:
-			return "Source callsign contains bad characters";
-
+			sprintf(output, "Source callsign contains bad characters");
+			break;
+		
 		case fapDSTPATH_TOOMANY:
-			return "Too many destination path components to be AX.25";
+			sprintf(output, "Too many destination path components to be AX.25");
+			break;
 		case fapDSTCALL_NONE:
-			return "No destination field in packet";
+			sprintf(output, "No destination field in packet");
+			break;
 		case fapDSTCALL_NOAX25:
-			return "Destination callsign is not a valid AX.25 call";
-	
+			sprintf(output, "Destination callsign is not a valid AX.25 call");
+			break;
+		
 		case fapDIGICALL_NOAX25:
-			return "Digipeater callsign is not a valid AX.25 call";
+			sprintf(output, "Digipeater callsign is not a valid AX.25 call");
+			break;
 		case fapDIGICALL_BADCHARS:
-			return "Digipeater callsign contains bad characters";
+			sprintf(output, "Digipeater callsign contains bad characters");
+			break;
 		
 		case fapTIMESTAMP_INV_LOC:
-			return "Invalid timestamp in location";
+			sprintf(output, "Invalid timestamp in location");
+			break;
 		case fapTIMESTAMP_INV_OBJ:
-			return "Invalid timestamp in object";
+			sprintf(output, "Invalid timestamp in object");
+			break;
 		case fapTIMESTAMP_INV_STA:
-			return "Invalid timestamp in status";
+			sprintf(output, "Invalid timestamp in status");
+			break;
 		case fapTIMESTAMP_INV_GPGGA:
-			return "Invalid timestamp in GPGGA sentence";
+			sprintf(output, "Invalid timestamp in GPGGA sentence");
+			break;
 		case fapTIMESTAMP_INV_GPGLL:
-			return "Invalid timestamp in GPGLL sentence";
+			sprintf(output, "Invalid timestamp in GPGLL sentence");
+			break;
 		
 		case fapPACKET_INVALID:
-			return "Invalid packet";
+			sprintf(output, "Invalid packet");
+			break;
 		
 		case fapNMEA_INV_CVAL:
-			return "Invalid coordinate value in NMEA sentence";
+			sprintf(output, "Invalid coordinate value in NMEA sentence");
+			break;
 		case fapNMEA_LARGE_EW:
-			return "Too large value in NMEA sentence (east/west)";
+			sprintf(output, "Too large value in NMEA sentence (east/west)");
+			break;
 		case fapNMEA_LARGE_NS:
-			return "Too large value in NMEA sentence (north/south)";
+			sprintf(output, "Too large value in NMEA sentence (north/south)");
+			break;
 		case fapNMEA_INV_SIGN:
-			return "Invalid lat/long sign in NMEA sentence";
+			sprintf(output, "Invalid lat/long sign in NMEA sentence");
+			break;
 		case fapNMEA_INV_CKSUM:
-			return "Invalid checksum in NMEA sentence";
+			sprintf(output, "Invalid checksum in NMEA sentence");
+			break;
 		
 		case fapGPRMC_FEWFIELDS:
-			return "Less than ten fields in GPRMC sentence";
+			sprintf(output, "Less than ten fields in GPRMC sentence");
+			break;
 		case fapGPRMC_NOFIX:
-			return "No GPS fix in GPRMC sentence";
+			sprintf(output, "No GPS fix in GPRMC sentence");
+			break;
 		case fapGPRMC_INV_TIME:
-			return "Invalid timestamp in GPRMC sentence";
+			sprintf(output, "Invalid timestamp in GPRMC sentence");
+			break;
 		case fapGPRMC_INV_DATE:
-			return "Invalid date in GPRMC sentence";
+			sprintf(output, "Invalid date in GPRMC sentence");
+			break;
 		case fapGPRMC_DATE_OUT:
-			return "GPRMC date does not fit in an Unix timestamp";
+			sprintf(output, "GPRMC date does not fit in an Unix timestamp");
+			break;
 		
 		case fapGPGGA_FEWFIELDS:
-			return "Less than 11 fields in GPGGA sentence";
+			sprintf(output, "Less than 11 fields in GPGGA sentence");
+			break;
 		case fapGPGGA_NOFIX:
-			return "No GPS fix in GPGGA sentence";
+			sprintf(output, "No GPS fix in GPGGA sentence");
+			break;
 		
 		case fapGPGLL_FEWFIELDS:
-			return "Less than 5 fields in GPGLL sentence";
+			sprintf(output, "Less than 5 fields in GPGLL sentence");
+			break;
 		case fapGPGLL_NOFIX:
-			return "No GPS fix in GPGLL sentence";
+			sprintf(output, "No GPS fix in GPGLL sentence");
+			break;
 		
 		case fapNMEA_UNSUPP:
-			return "Unsupported NMEA sentence type";
+			sprintf(output, "Unsupported NMEA sentence type");
+			break;
 		
 		case fapOBJ_SHORT:
-			return "Too short object";
+			sprintf(output, "Too short object");
+			break;
 		case fapOBJ_INV:
-			return "Invalid object";
+			sprintf(output, "Invalid object");
+			break;
 		case fapOBJ_DEC_ERR:
-			return "Error in object location decoding";
+			sprintf(output, "Error in object location decoding");
+			break;
 		
 		case fapITEM_SHORT:
-			return "Too short item";
+			sprintf(output, "Too short item");
+			break;
 		case fapITEM_INV:
-			return "Invalid item";
+			sprintf(output, "Invalid item");
+			break;
 		case fapITEM_DEC_ERR:
-			return "Error in item location decoding";
-			
+			sprintf(output, "Error in item location decoding");
+			break;
+		
 		case fapLOC_SHORT:
-			return "Too short uncompressed location";
+			sprintf(output, "Too short uncompressed location");
+			break;
 		case fapLOC_INV:
-			return "Invalid uncompressed location";
+			sprintf(output, "Invalid uncompressed location");
+			break;
 		case fapLOC_LARGE:
-			return "Degree value too large";
+			sprintf(output, "Degree value too large");
+			break;
 		case fapLOC_AMB_INV:
-			return "Invalid position ambiguity";
+			sprintf(output, "Invalid position ambiguity");
+			break;
 		
 		case fapMICE_SHORT:
-			return "Too short mic-e packet";
+			sprintf(output, "Too short mic-e packet");
+			break;
 		case fapMICE_INV:
-			return "Invalid characters in mic-e packet";
+			sprintf(output, "Invalid characters in mic-e packet");
+			break;
 		case fapMICE_INV_INFO:
-			return "Invalid characters in mic-e information field";
+			sprintf(output, "Invalid characters in mic-e information field");
+			break;
 		case fapMICE_AMB_LARGE:
-			return "Too much position ambiguity in mic-e packet";
+			sprintf(output, "Too much position ambiguity in mic-e packet");
+			break;
 		case fapMICE_AMB_INV:
-			return "Invalid position ambiguity in mic-e packet";
+			sprintf(output, "Invalid position ambiguity in mic-e packet");
+			break;
 		case fapMICE_AMB_ODD:
-			return "Odd position ambiguity in mic-e packet";
+			sprintf(output, "Odd position ambiguity in mic-e packet");
+			break;
 		
 		case fapCOMP_INV:
-			return "Invalid compressed packet";
+			sprintf(output, "Invalid compressed packet");
+			break;
 		case fapCOMP_SHORT:
-			return "Short compressed packet";
+			sprintf(output, "Short compressed packet");
+			break;
 		
 		case fapMSG_INV:
-			return "Invalid message packet";
+			sprintf(output, "Invalid message packet");
+			break;
 		
 		case fapWX_UNSUPP:
-			return "Unsupported weather format";
+			sprintf(output, "Unsupported weather format");
+			break;
 		case fapUSER_UNSUPP:
-			return "Unsupported user format";
-			
+			sprintf(output, "Unsupported user format");
+			break;
+		
 		case fapDX_INV_SRC:
-			return "Invalid DX spot source callsign";
+			sprintf(output, "Invalid DX spot source callsign");
+			break;
 		case fapDX_INF_FREQ:
-			return "Invalid DX spot frequency";
+			sprintf(output, "Invalid DX spot frequency");
+			break;
 		case fapDX_NO_DX:
-			return "No DX spot callsign found";
+			sprintf(output, "No DX spot callsign found");
+			break;
 		
 		case fapTLM_INV:
-			return "Invalid telemetry packet";
+			sprintf(output, "Invalid telemetry packet");
+			break;
 		case fapTLM_LARGE:
-			return "Too large telemetry value";
+			sprintf(output, "Too large telemetry value");
+			break;
 		case fapTLM_UNSUPP:
-			return "Unsupported telemetry";
+			sprintf(output, "Unsupported telemetry");
+			break;
 		
 		case fapEXP_UNSUPP:
-			return "Unsupported experimental";
+			sprintf(output, "Unsupported experimental");
+			break;
 		case fapSYM_INV_TABLE:
-			return "Invalid symbol table or overlay";
-			
+			sprintf(output, "Invalid symbol table or overlay");
+			break;
+		
 		case fapNOT_IMPLEMENTED:
-			return "Sorry, feature not implemented yet.";
+			sprintf(output, "Sorry, feature not implemented yet.");
+			break;
 		case fapNMEA_NOFIELDS:
-			return "No fields in NMEA fields in NMEA packet.";
-
+			sprintf(output, "No fields in NMEA fields in NMEA packet.");
+			break;
+		
 		case fapNO_APRS:
-			return "Not an APRS packet";
+			sprintf(output, "Not an APRS packet");
+			break;
+		
+		default:
+			sprintf(output, "Default error message.");
+			break;
 	}
-
-	return "This message never appears.";
 }
 
 
 
-char* fap_mice_mbits_to_message(char* bits)
+void fap_mice_mbits_to_message(char const* bits, char* output)
 {
-	if ( strcmp(bits, "111") == 0 ) return "off duty";
-	if ( strcmp(bits, "222") == 0 ) return "custom 0";
-	if ( strcmp(bits, "110") == 0 ) return "en route";
-	if ( strcmp(bits, "220") == 0 ) return "custom 1";
-	if ( strcmp(bits, "101") == 0 ) return "in service";
-	if ( strcmp(bits, "202") == 0 ) return "custom 2";
-	if ( strcmp(bits, "100") == 0 ) return "returning";
-	if ( strcmp(bits, "200") == 0 ) return "custom 3";
-	if ( strcmp(bits, "011") == 0 ) return "committed";
-	if ( strcmp(bits, "022") == 0 ) return "custom 4";
-	if ( strcmp(bits, "010") == 0 ) return "special";
-	if ( strcmp(bits, "020") == 0 ) return "custom 5";
-	if ( strcmp(bits, "001") == 0 ) return "priority";
-	if ( strcmp(bits, "002") == 0 ) return "custom 6";
-	if ( strcmp(bits, "000") == 0 ) return "emergency";
+	/* Dummy check. */
+	if ( bits == NULL || output == NULL )
+	{
+		return;
+	}
 	
-	return NULL;
+	/* Detect known bit combinations. */
+	if ( strcmp(bits, "111") == 0 ) sprintf(output, "off duty");
+	else if ( strcmp(bits, "222") == 0 ) sprintf(output, "custom 0");
+	else if ( strcmp(bits, "110") == 0 ) sprintf(output, "en route");
+	else if ( strcmp(bits, "220") == 0 ) sprintf(output, "custom 1");
+	else if ( strcmp(bits, "101") == 0 ) sprintf(output, "in service");
+	else if ( strcmp(bits, "202") == 0 ) sprintf(output, "custom 2");
+	else if ( strcmp(bits, "100") == 0 ) sprintf(output, "returning");
+	else if ( strcmp(bits, "200") == 0 ) sprintf(output, "custom 3");
+	else if ( strcmp(bits, "011") == 0 ) sprintf(output, "committed");
+	else if ( strcmp(bits, "022") == 0 ) sprintf(output, "custom 4");
+	else if ( strcmp(bits, "010") == 0 ) sprintf(output, "special");
+	else if ( strcmp(bits, "020") == 0 ) sprintf(output, "custom 5");
+	else if ( strcmp(bits, "001") == 0 ) sprintf(output, "priority");
+	else if ( strcmp(bits, "002") == 0 ) sprintf(output, "custom 6");
+	else if ( strcmp(bits, "000") == 0 ) sprintf(output, "emergency");
+	else sprintf(output, "unknown");
 }
 
 
@@ -1664,7 +1741,6 @@ void fap_free(fap_packet_t* packet)
 	}
 
 	if ( packet->error_code ) { free(packet->error_code); }
-	if ( packet->error_message ) { free(packet->error_message); }
 	if ( packet->type ) { free(packet->type); }
 	
 	if ( packet->orig_packet ) { free(packet->orig_packet); }

@@ -1,4 +1,4 @@
-/* $Id: helpers.c 179 2011-01-17 12:38:00Z oh2gve $
+/* $Id: helpers.c 187 2011-02-16 21:58:11Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -1563,8 +1563,6 @@ int fapint_parse_nmea(fap_packet_t* packet, char const* input, unsigned int cons
 			/* We want at least 10 fields. */
 			if ( nmea_field_count < 10 )
 			{
-				packet->error_message = malloc(300);
-				sprintf(packet->error_message, "nmea_field_count=%d\n", nmea_field_count);
 				packet->error_code = malloc(sizeof(fap_error_code_t));
 				if ( packet->error_code ) *packet->error_code = fapGPRMC_FEWFIELDS;
 				retval = 0;
@@ -3735,7 +3733,6 @@ fap_packet_t* fapint_create_packet()
 
 	/* Prepare result object. */
 	result->error_code = NULL;
-	result->error_message = NULL;
 	result->type = NULL;
 	
 	result->orig_packet = NULL;

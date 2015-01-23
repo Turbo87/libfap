@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-# $Id: Makefile.am 164 2010-04-03 07:05:41Z oh2gve $
+# $Id: Makefile.am 195 2011-02-26 09:41:12Z oh2gve $
 
 
 VPATH = @srcdir@
@@ -35,7 +35,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-check_PROGRAMS = smoketest$(EXEEXT)
 subdir = src
 DIST_COMMON = $(library_include_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in
@@ -62,9 +61,6 @@ libfap_la_OBJECTS = $(am_libfap_la_OBJECTS)
 libfap_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libfap_la_LDFLAGS) $(LDFLAGS) -o $@
-am_smoketest_OBJECTS = smoketest.$(OBJEXT)
-smoketest_OBJECTS = $(am_smoketest_OBJECTS)
-smoketest_DEPENDENCIES =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -77,8 +73,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(libfap_la_SOURCES) $(smoketest_SOURCES)
-DIST_SOURCES = $(libfap_la_SOURCES) $(smoketest_SOURCES)
+SOURCES = $(libfap_la_SOURCES)
+DIST_SOURCES = $(libfap_la_SOURCES)
 library_includeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(library_include_HEADERS)
 ETAGS = etags
@@ -204,11 +200,6 @@ libfap_la_SOURCES = fap.h fap.c regs.h helpers.h helpers.c helpers2.h helpers2.c
 # Include header file.
 library_includedir = $(includedir)
 library_include_HEADERS = fap.h
-smoketest_SOURCES = smoketest.c fap.h
-smoketest_LDADD = -lfap
-EXTRA_DIST = smoketest.data
-# Run the test app automagically on make check.
-TESTS = $(check_PROGRAMS)
 all: all-am
 
 .SUFFIXES:
@@ -272,16 +263,6 @@ clean-libLTLIBRARIES:
 libfap.la: $(libfap_la_OBJECTS) $(libfap_la_DEPENDENCIES) 
 	$(libfap_la_LINK) -rpath $(libdir) $(libfap_la_OBJECTS) $(libfap_la_LIBADD) $(LIBS)
 
-clean-checkPROGRAMS:
-	@list='$(check_PROGRAMS)'; for p in $$list; do \
-	  f=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
-	  echo " rm -f $$p $$f"; \
-	  rm -f $$p $$f ; \
-	done
-smoketest$(EXEEXT): $(smoketest_OBJECTS) $(smoketest_DEPENDENCIES) 
-	@rm -f smoketest$(EXEEXT)
-	$(LINK) $(smoketest_OBJECTS) $(smoketest_LDADD) $(LIBS)
-
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -291,7 +272,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/helpers.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/helpers2.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smoketest.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -384,79 +364,6 @@ GTAGS:
 distclean-tags:
 	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
 
-check-TESTS: $(TESTS)
-	@failed=0; all=0; xfail=0; xpass=0; skip=0; ws='[	 ]'; \
-	srcdir=$(srcdir); export srcdir; \
-	list=' $(TESTS) '; \
-	if test -n "$$list"; then \
-	  for tst in $$list; do \
-	    if test -f ./$$tst; then dir=./; \
-	    elif test -f $$tst; then dir=; \
-	    else dir="$(srcdir)/"; fi; \
-	    if $(TESTS_ENVIRONMENT) $${dir}$$tst; then \
-	      all=`expr $$all + 1`; \
-	      case " $(XFAIL_TESTS) " in \
-	      *$$ws$$tst$$ws*) \
-		xpass=`expr $$xpass + 1`; \
-		failed=`expr $$failed + 1`; \
-		echo "XPASS: $$tst"; \
-	      ;; \
-	      *) \
-		echo "PASS: $$tst"; \
-	      ;; \
-	      esac; \
-	    elif test $$? -ne 77; then \
-	      all=`expr $$all + 1`; \
-	      case " $(XFAIL_TESTS) " in \
-	      *$$ws$$tst$$ws*) \
-		xfail=`expr $$xfail + 1`; \
-		echo "XFAIL: $$tst"; \
-	      ;; \
-	      *) \
-		failed=`expr $$failed + 1`; \
-		echo "FAIL: $$tst"; \
-	      ;; \
-	      esac; \
-	    else \
-	      skip=`expr $$skip + 1`; \
-	      echo "SKIP: $$tst"; \
-	    fi; \
-	  done; \
-	  if test "$$failed" -eq 0; then \
-	    if test "$$xfail" -eq 0; then \
-	      banner="All $$all tests passed"; \
-	    else \
-	      banner="All $$all tests behaved as expected ($$xfail expected failures)"; \
-	    fi; \
-	  else \
-	    if test "$$xpass" -eq 0; then \
-	      banner="$$failed of $$all tests failed"; \
-	    else \
-	      banner="$$failed of $$all tests did not behave as expected ($$xpass unexpected passes)"; \
-	    fi; \
-	  fi; \
-	  dashes="$$banner"; \
-	  skipped=""; \
-	  if test "$$skip" -ne 0; then \
-	    skipped="($$skip tests were not run)"; \
-	    test `echo "$$skipped" | wc -c` -le `echo "$$banner" | wc -c` || \
-	      dashes="$$skipped"; \
-	  fi; \
-	  report=""; \
-	  if test "$$failed" -ne 0 && test -n "$(PACKAGE_BUGREPORT)"; then \
-	    report="Please report to $(PACKAGE_BUGREPORT)"; \
-	    test `echo "$$report" | wc -c` -le `echo "$$banner" | wc -c` || \
-	      dashes="$$report"; \
-	  fi; \
-	  dashes=`echo "$$dashes" | sed s/./=/g`; \
-	  echo "$$dashes"; \
-	  echo "$$banner"; \
-	  test -z "$$skipped" || echo "$$skipped"; \
-	  test -z "$$report" || echo "$$report"; \
-	  echo "$$dashes"; \
-	  test "$$failed" -eq 0; \
-	else :; fi
-
 distdir: $(DISTFILES)
 	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
@@ -484,8 +391,6 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-	$(MAKE) $(AM_MAKEFLAGS) $(check_PROGRAMS)
-	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
 all-am: Makefile $(LTLIBRARIES) $(HEADERS)
 installdirs:
@@ -518,8 +423,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-checkPROGRAMS clean-generic clean-libLTLIBRARIES \
-	clean-libtool mostlyclean-am
+clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
+	mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -578,20 +483,20 @@ uninstall-am: uninstall-libLTLIBRARIES \
 
 .MAKE: install-am install-strip
 
-.PHONY: CTAGS GTAGS all all-am check check-TESTS check-am clean \
-	clean-checkPROGRAMS clean-generic clean-libLTLIBRARIES \
-	clean-libtool ctags distclean distclean-compile \
-	distclean-generic distclean-libtool distclean-tags distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-libLTLIBRARIES \
-	install-library_includeHEADERS install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-libLTLIBRARIES \
+.PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
+	clean-libLTLIBRARIES clean-libtool ctags distclean \
+	distclean-compile distclean-generic distclean-libtool \
+	distclean-tags distdir dvi dvi-am html html-am info info-am \
+	install install-am install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am \
+	install-libLTLIBRARIES install-library_includeHEADERS \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags uninstall \
+	uninstall-am uninstall-libLTLIBRARIES \
 	uninstall-library_includeHEADERS
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
