@@ -1,3 +1,9 @@
+libfap 1.2
+
+   * Added metadata file for pkg-config
+
+ -- Tapio Aaltonen, OH2GVE <oh2gve@pakettiradio.net> Sun, 22 May 2011 19:34:17 +0300
+
 libfap 1.1
 
    * Changed code-to-text explainging functions returning char* to use

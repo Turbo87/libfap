@@ -1,4 +1,4 @@
-/* $Id: helpers.h 179 2011-01-17 12:38:00Z oh2gve $
+/* $Id: helpers.h 199 2011-05-22 05:09:13Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -179,12 +179,6 @@ char* fapint_check_kiss_callsign(char* input);
 
 /// Creates and initializes an empty packet.
 fap_packet_t* fapint_create_packet();
-
-
-/// Returns copy if given input with specified part removed.
-char* fapint_remove_part(char const* input, unsigned int const input_len,
-                         unsigned int const part_so, unsigned int const part_eo,
-                         unsigned int* result_len);
 
 
 

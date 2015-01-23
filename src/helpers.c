@@ -1,4 +1,4 @@
-/* $Id: helpers.c 187 2011-02-16 21:58:11Z oh2gve $
+/* $Id: helpers.c 200 2011-05-22 16:42:29Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -688,6 +688,9 @@ int fapint_parse_mice(fap_packet_t* packet, char const* input, unsigned int cons
 			}
 		}
 	}
+
+	/* Check for base-91 comment telemetry. */
+	/*fapint_parse_comment_telemetry(packet, &rest, &len);*/
 	
 	/* If there's something left, save it as a comment. */
 	if ( len > 0 )
@@ -1345,6 +1348,9 @@ void fapint_parse_comment(fap_packet_t* packet, char const* input, unsigned int 
 			}
 		}
 	}
+	
+	/* Check for base-91 comment telemetry. */
+	/*fapint_parse_comment_telemetry(packet, &rest, &rest_len);*/
 	
 	/* If there's something left, save it as a comment. */
 	if ( rest_len > 0 )
@@ -2950,13 +2956,7 @@ int fapint_parse_telemetry(fap_packet_t* packet, char const* input)
 		/* Initialize results. */
 		packet->telemetry = malloc(sizeof(fap_telemetry_t));
 		if ( !packet->telemetry ) return 0;
-		packet->telemetry->seq = 0;
-		packet->telemetry->val1 = 0.0;
-		packet->telemetry->val2 = 0.0;
-		packet->telemetry->val3 = 0.0;
-		packet->telemetry->val4 = 0.0;
-		packet->telemetry->val5 = 0.0;
-		memset(packet->telemetry->bits, '?', 8);
+		fapint_init_telemetry_report(packet->telemetry);
 		
 		/* seq */
 		len1 = matches[1].rm_eo - matches[1].rm_so;
@@ -3788,54 +3788,5 @@ fap_packet_t* fapint_create_packet()
 	result->capabilities_len = 0;
 	
 	/* Return results. */
-	return result;
-}
-
-
-
-char* fapint_remove_part(char const* input, unsigned int const input_len,
-                         unsigned int const part_so, unsigned int const part_eo,
-                         unsigned int* result_len)
-{
-	unsigned int i, part_i;
-	char* result;
-
-
-	/* Check params. */
-	if( !input || !input_len || part_so >= input_len || part_eo > input_len || part_so >= part_eo )
-	{
-		*result_len = 0;
-		return NULL;
-	}
-
-	/* Calculate size of result. */
-	*result_len = input_len - (part_eo - part_so);
-	if ( *result_len == 0 )
-	{
-		return NULL;
-	}
-
-	/* Copy input into result. */
-	result = malloc(*result_len+1);
-	if ( !result )
-	{
-		*result_len = 0;
-		return NULL;
-	}
-	part_i = 0;
-	for ( i = 0; i < input_len; ++i )
-	{
-		/* Skip given part. */
-		if ( i < part_so || i >= part_eo )
-		{
-			result[part_i] = input[i];
-			++part_i;
-		}
-	}
-
-	/* Add 0 to the end. */
-	result[*result_len] = 0;
-
-
 	return result;
 }

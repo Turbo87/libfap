@@ -1,4 +1,4 @@
-/* $Id: helpers2.h 172 2010-05-06 09:50:16Z oh2gve $
+/* $Id: helpers2.h 199 2011-05-22 05:09:13Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -112,8 +112,31 @@ int fapint_check_date(unsigned int year, unsigned int month, unsigned int day);
 int fapint_get_nmea_latlon(fap_packet_t* packet, char* field1, char* field2);
 
 
+/// Parse base-91 telemetry from comment text.
+/**
+ * \param packet Results are saved here.
+ * \param rest Comment text.
+ * \param rest_len Lenght of rest in bytes.
+*/
+void fapint_parse_comment_telemetry(fap_packet_t* packet, char** rest, unsigned int* rest_len);
+
+
 /// Set all fields of given wx report to NULL.
 void fapint_init_wx_report(fap_wx_report_t* wx_report);
+
+
+// Reset fields of given telemetry report.
+/**
+ * Numeric fields are set to 0, bits are set to ?.
+ * \param report to reset.
+*/
+void fapint_init_telemetry_report(fap_telemetry_t* telemetry);
+
+
+/// Returns copy of given input with specified part removed.
+char* fapint_remove_part(char const* input, unsigned int const input_len,
+                         unsigned int const part_so, unsigned int const part_eo,
+                         unsigned int* result_len);
 
 
 #endif // HELPERS2_H

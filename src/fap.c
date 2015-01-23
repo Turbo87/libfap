@@ -1,4 +1,4 @@
-/* $Id: fap.c 187 2011-02-16 21:58:11Z oh2gve $
+/* $Id: fap.c 200 2011-05-22 16:42:29Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -74,6 +74,7 @@ int main()
 
 #include "fap.h"
 #include "helpers.h"
+#include "helpers2.h"
 #include "regs.h"
 #ifdef HAVE_CONFIG_H
 #include <config.h>

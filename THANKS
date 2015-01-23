@@ -9,3 +9,5 @@ idea of AX.25-frame conversion functions.
 
 Andrew Elwell for pointing out the unclear licensing terms and creating the
 RPM package.
+
+Gordon, MM0YEQ for pkg-config metadata file.

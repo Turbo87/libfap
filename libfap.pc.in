@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libfap
+Version: @PACKAGE_VERSION@
+Description: Finnish APRS Parser, ported to C
+Libs: -L${libdir} -lfap
+Cflags: -I${includedir}

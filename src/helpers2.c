@@ -1,4 +1,4 @@
-/* $Id: helpers2.c 179 2011-01-17 12:38:00Z oh2gve $
+/* $Id: helpers2.c 200 2011-05-22 16:42:29Z oh2gve $
  *
  * Copyright 2005, 2006, 2007, 2008, 2009, 2010 Tapio Sokura
  * Copyright 2007, 2008, 2009, 2010 Heikki Hannikainen
@@ -528,6 +528,176 @@ int fapint_get_nmea_latlon(fap_packet_t* packet, char* field1, char* field2)
 
 
 
+short fapint_valid_com_telem_char(char c)
+{
+	if ( c >= '!' && c <= '{' )
+	{
+		return 1;
+	}
+	return 0;
+}
+
+
+void fapint_parse_comment_telemetry(fap_packet_t* packet, char** rest, unsigned int* rest_len)
+{
+	int len = 0, i = 0, j = 0, tmp;
+	char* tmp_str;
+	unsigned int tmp_us;
+	char buf[10];
+	
+	/* Look for start marker. */
+	for ( i = 0; i < *rest_len; ++i )
+	{
+		if ( (*rest)[i] == '|' )
+		{
+			/* Look for stop marker. */
+			for ( j = i+1; j < *rest_len; ++j )
+			{
+				if ( (*rest)[j] == '|' )
+				{
+					break;
+				}
+			}
+			break;
+		}
+	}
+	
+	/* Check that we found markers, and that they mark even-lenght string. */
+	len = j - i + 1;
+	if ( i < *rest_len && j < *rest_len && len > 1 && len % 2 == 0)
+	{
+		/* Check for sequence id. */
+		if ( len >= 4 )
+		{
+			if ( fapint_valid_com_telem_char((*rest)[i+1]) &&
+			     fapint_valid_com_telem_char((*rest)[i+2]) )
+			{
+				/* Initialize results. */
+				packet->telemetry = malloc(sizeof(fap_telemetry_t));
+				if ( !packet->telemetry ) return;
+				fapint_init_telemetry_report(packet->telemetry);
+				
+				packet->telemetry->seq = ((*rest)[i+1] - 33) * 91 + (*rest)[i+2] - 33;
+			}
+			else
+			{
+				return;
+			}
+		}
+		
+		/* Check for first data value. */
+		if ( len >= 6 )
+		{
+			if ( fapint_valid_com_telem_char((*rest)[i+3]) &&
+			     fapint_valid_com_telem_char((*rest)[i+4]) )
+			{
+				packet->telemetry->val1 = ((*rest)[i+3] - 33) * 91 + (*rest)[i+4] - 33;
+			}
+			else
+			{
+				free(packet->telemetry);
+				packet->telemetry = NULL;
+				return;
+			}
+		}
+		
+		/* Check for second data value. */
+		if ( len >= 8 )
+		{
+			if ( fapint_valid_com_telem_char((*rest)[i+5]) &&
+			     fapint_valid_com_telem_char((*rest)[i+6]) )
+			{
+				packet->telemetry->val2 = ((*rest)[i+5] - 33) * 91 + (*rest)[i+6] - 33;
+			}
+			else
+			{
+				free(packet->telemetry);
+				packet->telemetry = NULL;
+				return;
+			}
+		}
+		
+		/* Check for third data value. */
+		if ( len >= 10 )
+		{
+			if ( fapint_valid_com_telem_char((*rest)[i+7]) &&
+			     fapint_valid_com_telem_char((*rest)[i+8]) )
+			{
+				packet->telemetry->val3 = ((*rest)[i+7] - 33) * 91 + (*rest)[i+8] - 33;
+			}
+			else
+			{
+				free(packet->telemetry);
+				packet->telemetry = NULL;
+				return;
+			}
+		}
+		
+		/* Check for fourth data value. */
+		if ( len >= 12 )
+		{
+			if ( fapint_valid_com_telem_char((*rest)[i+9]) &&
+			     fapint_valid_com_telem_char((*rest)[i+10]) )
+			{
+				packet->telemetry->val4 = ((*rest)[i+9] - 33) * 91 + (*rest)[i+10] - 33;
+			}
+			else
+			{
+				free(packet->telemetry);
+				packet->telemetry = NULL;
+				return;
+			}
+		}
+		
+		/* Check for fifth data value. */
+		if ( len >= 14 )
+		{
+			if ( fapint_valid_com_telem_char((*rest)[i+11]) &&
+			     fapint_valid_com_telem_char((*rest)[i+12]) )
+			{
+				packet->telemetry->val5 = ((*rest)[i+11] - 33) * 91 + (*rest)[i+12] - 33;
+			}
+			else
+			{
+				free(packet->telemetry);
+				packet->telemetry = NULL;
+				return;
+			}
+		}
+		
+		/* Check for bits. */
+		if ( len >= 16 )
+		{
+			if ( fapint_valid_com_telem_char((*rest)[i+13]) &&
+			     fapint_valid_com_telem_char((*rest)[i+14]) )
+			{
+				tmp = ((*rest)[i+13] - 33) * 91 + (*rest)[i+14] - 33;
+				
+				/* Print bits as digits. */
+				sprintf(buf, "%d%d%d%d%d%d%d%d", 0x01 & tmp, 0x02 & tmp, 0x04 & tmp, 0x08 & tmp, 0x10 & tmp, 0x20 & tmp, 0x40 & tmp, 0x80 & tmp);
+				for ( tmp = 0; tmp < strlen(buf) && tmp < 8; ++tmp )
+				{
+					packet->telemetry->bits[tmp] = buf[tmp];
+				}
+			}
+			else
+			{
+				free(packet->telemetry);
+				packet->telemetry = NULL;
+				return;
+			}
+		}
+		
+		/* Remove telemetry string from comment. */
+		tmp_us = *rest_len;
+		tmp_str = fapint_remove_part(*rest, tmp_us, i, j+1, rest_len);
+		free(*rest);
+		*rest = tmp_str;
+	}
+}
+
+
+
 void fapint_init_wx_report(fap_wx_report_t* wx_report)
 {
 	wx_report->wind_gust = NULL;
@@ -544,4 +714,67 @@ void fapint_init_wx_report(fap_wx_report_t* wx_report)
 	wx_report->luminosity = NULL;
 	wx_report->snow_24h = NULL;
 	wx_report->soft = NULL;
+}
+
+
+
+void fapint_init_telemetry_report(fap_telemetry_t* telemetry)
+{
+	if ( !telemetry ) return;
+	telemetry->seq = 0;
+	telemetry->val1 = 0.0;
+	telemetry->val2 = 0.0;
+	telemetry->val3 = 0.0;
+	telemetry->val4 = 0.0;
+	telemetry->val5 = 0.0;
+	memset(telemetry->bits, '?', 8);
+}
+
+
+
+char* fapint_remove_part(char const* input, unsigned int const input_len,
+                         unsigned int const part_so, unsigned int const part_eo,
+                         unsigned int* result_len)
+{
+	unsigned int i, part_i;
+	char* result;
+
+
+	/* Check params. */
+	if( !input || !input_len || part_so >= input_len || part_eo > input_len || part_so >= part_eo )
+	{
+		*result_len = 0;
+		return NULL;
+	}
+
+	/* Calculate size of result. */
+	*result_len = input_len - (part_eo - part_so);
+	if ( *result_len == 0 )
+	{
+		return NULL;
+	}
+
+	/* Copy input into result. */
+	result = malloc(*result_len+1);
+	if ( !result )
+	{
+		*result_len = 0;
+		return NULL;
+	}
+	part_i = 0;
+	for ( i = 0; i < input_len; ++i )
+	{
+		/* Skip given part. */
+		if ( i < part_so || i >= part_eo )
+		{
+			result[part_i] = input[i];
+			++part_i;
+		}
+	}
+
+	/* Add 0 to the end. */
+	result[*result_len] = 0;
+
+
+	return result;
 }
